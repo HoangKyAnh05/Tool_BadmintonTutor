@@ -466,9 +466,33 @@ git push -u origin main</code></pre>
           </div>
 
           <div class="form-group">
-            <label>Nhiệm vụ 30 ngày (Tiến độ học tập)</label>
-            <div class="modal-tasks-list" id="modal-student-tasks-container">
-              <!-- Filled dynamically or on add -->
+            <label style="display: flex; justify-content: space-between; align-items: center;">
+              <span>Mục tiêu 30 ngày (Tiến độ tập luyện)</span>
+            </label>
+            
+            <!-- Quick templates selector -->
+            <div class="task-templates-row" style="display: flex; gap: 8px; margin-bottom: 10px;">
+              <select id="student-task-template" class="form-control" style="flex: 1; height: 38px; padding: 6px 12px; font-size: 13px;">
+                <option value="">-- Chọn giáo án/mục tiêu mẫu --</option>
+                <option value="basic">1. Mẫu Cơ Bản (Người mới bắt đầu)</option>
+                <option value="advanced">2. Mẫu Nâng Cao (Thi đấu / Nâng cao)</option>
+                <option value="fitness">3. Mẫu Thể Lực (Sức bền & Giảm cân)</option>
+                <option value="kids">4. Mẫu Trẻ Em (Thiếu nhi / Vui nhộn)</option>
+              </select>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-apply-task-template" style="white-space: nowrap; height: 38px;">Áp dụng</button>
+            </div>
+            
+            <!-- Add custom task box -->
+            <div class="add-task-row" style="display: flex; gap: 8px; margin-bottom: 12px;">
+              <input type="text" id="new-task-input" class="form-control" placeholder="Nhập mục tiêu 30 ngày mới..." style="flex: 1; height: 38px; padding: 6px 12px; font-size: 13px;">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-add-modal-task" style="white-space: nowrap; height: 38px;">
+                Thêm
+              </button>
+            </div>
+            
+            <!-- Task list container -->
+            <div class="modal-tasks-list" id="modal-student-tasks-container" style="max-height: 180px; overflow-y: auto;">
+              <!-- Filled dynamically -->
             </div>
           </div>
         </form>

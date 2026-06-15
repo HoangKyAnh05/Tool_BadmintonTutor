@@ -12,7 +12,7 @@ if (!isElectron) {
         try {
           const parsed = JSON.parse(dataStr);
           if (!parsed.settings) parsed.settings = {};
-          if (!parsed.settings.apiKey) parsed.settings.apiKey = 'AQ.Ab8RN6KdaAzrVBuMEWV-QO18e56koV9ScO5j_jYsqUyQcEfEAg';
+          if (!parsed.settings.apiKey) parsed.settings.apiKey = '';
           if (parsed.settings.aiModel === 'gemini-1.5-flash') {
             parsed.settings.aiModel = 'gemini-2.5-flash';
           }
@@ -23,7 +23,7 @@ if (!isElectron) {
       }
       return {
         settings: {
-          apiKey: 'AQ.Ab8RN6KdaAzrVBuMEWV-QO18e56koV9ScO5j_jYsqUyQcEfEAg',
+          apiKey: '',
           apiProvider: 'gemini',
           aiModel: 'gemini-2.5-flash',
           defaultTasks: []
@@ -42,16 +42,17 @@ if (!isElectron) {
     },
     callAI: async ({ provider, apiKey, model, prompt }) => {
       try {
-        const key = apiKey || 'AQ.Ab8RN6KdaAzrVBuMEWV-QO18e56koV9ScO5j_jYsqUyQcEfEAg';
+        const key = apiKey || '';
         
         if (provider === 'gemini') {
           const selectedModel = model || 'gemini-2.5-flash';
-          const url = `https://generativelanguage.googleapis.com/v1/models/${selectedModel}:generateContent?key=${key}`;
+          const url = `https://generativelanguage.googleapis.com/v1/models/${selectedModel}:generateContent`;
           
           const response = await fetch(url, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'x-goog-api-key': key
             },
             body: JSON.stringify({
               contents: [{
@@ -135,6 +136,46 @@ const DEFAULT_TASKS_LIST = [
   "Rèn luyện thể lực và sức bền 90 phút"
 ];
 
+// Presets templates for different student types
+const TASK_TEMPLATES = {
+  basic: [
+    "Tập di chuyển bước chân cơ bản (Footwork)",
+    "Kỹ thuật giao cầu ngắn và dài (Serve)",
+    "Kỹ thuật phông cầu cao sâu (Clear)",
+    "Kỹ thuật bỏ nhỏ sát lưới (Drop shot)",
+    "Học luật thi đấu cầu lông cơ bản",
+    "Tập phản xạ đỡ cầu thẳng người",
+    "Rèn luyện thể lực cơ bản 45 phút"
+  ],
+  advanced: [
+    "Kỹ thuật đập cầu tấn công mạnh (Smash)",
+    "Kỹ thuật ve cầu/backhand cao sâu",
+    "Chiến thuật di chuyển và bọc lót sân đôi",
+    "Chiến thuật điều cầu ép góc sân đơn",
+    "Kỹ thuật đẩy cầu/tạt cầu nhanh trên lưới",
+    "Kỹ thuật chặn lưới/bỏ nhỏ hiểm hóc",
+    "Thể lực chuyên sâu di chuyển đa hướng"
+  ],
+  fitness: [
+    "Bài tập chạy bền sức bền tim mạch 30 phút",
+    "Bài tập di chuyển footwork tốc độ cao",
+    "Bài tập bật nhảy dây 1000 lượt",
+    "Các bài tập HIIT bổ trợ cơ đùi và vai",
+    "Tập tạ bổ trợ lực cổ tay và vai",
+    "Rèn luyện thể lực và sức bền 90 phút"
+  ],
+  kids: [
+    "Trò chơi khởi động vui nhộn với cầu",
+    "Tập phản xạ đón cầu bằng vợt",
+    "Tập các bước chạy cơ bản vui vẻ",
+    "Học cách cầm vợt đúng (Forehand/Backhand)",
+    "Tập giao cầu tự do qua lưới",
+    "Bài tập thể thao phối hợp phát triển chiều cao"
+  ]
+};
+
+let modalActiveTasks = [];
+
 // Constants for Schedule Grid
 const DAYS_OF_WEEK = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'];
 const DAYS_ENG = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -192,6 +233,10 @@ const btnCancelStudent = document.getElementById('btn-cancel-student');
 const btnSaveStudent = document.getElementById('btn-save-student');
 const studentForm = document.getElementById('student-form');
 const modalStudentTasksContainer = document.getElementById('modal-student-tasks-container');
+const studentTaskTemplate = document.getElementById('student-task-template');
+const btnApplyTaskTemplate = document.getElementById('btn-apply-task-template');
+const newTaskInput = document.getElementById('new-task-input');
+const btnAddModalTask = document.getElementById('btn-add-modal-task');
 
 // Mouse Drag State for Schedule Grid
 let isMouseDown = false;
@@ -677,11 +722,52 @@ function setupModals() {
   btnCloseStudentModal.addEventListener('click', closeStudentModal);
   btnCancelStudent.addEventListener('click', closeStudentModal);
   btnSaveStudent.addEventListener('click', saveStudentForm);
+
+  // Apply template event
+  btnApplyTaskTemplate.addEventListener('click', () => {
+    const templateKey = studentTaskTemplate.value;
+    if (!templateKey) {
+      showToast("Vui lòng chọn một giáo án mẫu!", "warning");
+      return;
+    }
+    const templateTasks = TASK_TEMPLATES[templateKey];
+    if (templateTasks) {
+      modalActiveTasks = templateTasks.map(t => ({ text: t, completed: false }));
+      renderModalTasksChecklist();
+      showToast("Đã áp dụng giáo án mẫu thành công!", "success");
+    }
+  });
+
+  // Add custom task event
+  btnAddModalTask.addEventListener('click', () => {
+    const text = newTaskInput.value.trim();
+    if (!text) {
+      showToast("Vui lòng nhập mục tiêu mới!", "warning");
+      return;
+    }
+    if (modalActiveTasks.some(t => t.text.toLowerCase() === text.toLowerCase())) {
+      showToast("Mục tiêu này đã tồn tại!", "warning");
+      return;
+    }
+    modalActiveTasks.push({ text: text, completed: false });
+    newTaskInput.value = '';
+    renderModalTasksChecklist();
+  });
+
+  // Trigger add task on Enter key
+  newTaskInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      btnAddModalTask.click();
+    }
+  });
 }
 
 function openStudentModal(studentId = null) {
   studentForm.reset();
   modalStudentTasksContainer.innerHTML = '';
+  studentTaskTemplate.value = ''; // Reset template selector
+  newTaskInput.value = '';
 
   if (studentId) {
     // Edit Mode
@@ -704,8 +790,8 @@ function openStudentModal(studentId = null) {
     document.getElementById('student-highlights').value = st.highlights || '';
 
     // Populate Tasks Checklist
-    const tasks = st.tasks && st.tasks.length > 0 ? st.tasks : state.settings.defaultTasks.map(t => ({ text: t, completed: false }));
-    renderModalTasksChecklist(tasks);
+    modalActiveTasks = st.tasks && st.tasks.length > 0 ? [...st.tasks] : state.settings.defaultTasks.map(t => ({ text: t, completed: false }));
+    renderModalTasksChecklist();
   } else {
     // Create Mode
     document.getElementById('student-modal-title').innerText = "Thêm Học Viên Mới";
@@ -717,26 +803,47 @@ function openStudentModal(studentId = null) {
     document.getElementById('student-unexcused-absences').value = 0;
 
     // Populate default task list
-    const defaultTasks = state.settings.defaultTasks.map(t => ({ text: t, completed: false }));
-    renderModalTasksChecklist(defaultTasks);
+    modalActiveTasks = state.settings.defaultTasks.map(t => ({ text: t, completed: false }));
+    renderModalTasksChecklist();
   }
 
   studentModal.style.display = 'flex';
 }
 
-function renderModalTasksChecklist(tasks) {
+function renderModalTasksChecklist() {
   modalStudentTasksContainer.innerHTML = '';
-  tasks.forEach((task, idx) => {
+  modalActiveTasks.forEach((task, idx) => {
     const div = document.createElement('div');
     div.className = 'modal-task-item';
+    div.style.display = 'flex';
+    div.style.alignItems = 'center';
+    div.style.gap = '10px';
+    div.style.marginBottom = '6px';
 
     const id = `modal-task-${idx}`;
     div.innerHTML = `
-      <input type="checkbox" id="${id}" ${task.completed ? 'checked' : ''} data-task-text="${task.text}">
-      <label for="${id}">${task.text}</label>
+      <input type="checkbox" id="${id}" ${task.completed ? 'checked' : ''} style="width:16px; height:16px; accent-color:var(--accent-primary); cursor:pointer;">
+      <label for="${id}" style="font-size:13.5px; color:var(--text-secondary); cursor:pointer; flex: 1; margin:0;">${task.text}</label>
+      <button type="button" class="btn-delete-task" style="background:none; border:none; color:var(--accent-red); cursor:pointer; font-size:18px; padding:0 6px; line-height:1; font-weight:bold; transition: color var(--transition-fast);">&times;</button>
     `;
+
+    // Handle checkbox change
+    div.querySelector('input').addEventListener('change', (e) => {
+      modalActiveTasks[idx].completed = e.target.checked;
+    });
+
+    // Handle delete button click
+    div.querySelector('.btn-delete-task').addEventListener('click', () => {
+      modalActiveTasks.splice(idx, 1);
+      renderModalTasksChecklist();
+    });
+
     modalStudentTasksContainer.appendChild(div);
   });
+
+  if (modalActiveTasks.length === 0) {
+    modalStudentTasksContainer.innerHTML = '<p class="empty-msg" style="padding: 10px 0;">Chưa có mục tiêu nào được thêm. Hãy chọn mẫu hoặc thêm thủ công.</p>';
+  }
 }
 
 function closeStudentModal() {
@@ -777,14 +884,7 @@ async function saveStudentForm() {
   }
 
   // Get Tasks checklist
-  const tasks = [];
-  const taskItems = modalStudentTasksContainer.querySelectorAll('.modal-task-item input');
-  taskItems.forEach(item => {
-    tasks.push({
-      text: item.getAttribute('data-task-text'),
-      completed: item.checked
-    });
-  });
+  const tasks = [...modalActiveTasks];
 
   if (idVal) {
     // Edit existing

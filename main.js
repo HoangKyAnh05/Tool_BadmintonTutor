@@ -8,7 +8,7 @@ const DATA_FILE_PATH = path.join(app.getPath('userData'), 'badminton_tutor_data.
 // Default initial state if data file doesn't exist
 const DEFAULT_DATA = {
   settings: {
-    apiKey: 'AQ.Ab8RN6KdaAzrVBuMEWV-QO18e56koV9ScO5j_jYsqUyQcEfEAg',
+    apiKey: '',
     apiProvider: 'gemini',
     aiModel: 'gemini-2.5-flash'
   },
@@ -97,12 +97,13 @@ ipcMain.handle('call-ai', async (event, { provider, apiKey, model, prompt }) => 
     if (provider === 'gemini') {
       const selectedModel = model || 'gemini-2.5-flash';
       // Use direct fetch call to avoid native sdk issues
-      const url = `https://generativelanguage.googleapis.com/v1/models/${selectedModel}:generateContent?key=${key}`;
+      const url = `https://generativelanguage.googleapis.com/v1/models/${selectedModel}:generateContent`;
       
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-goog-api-key': key
         },
         body: JSON.stringify({
           contents: [{
