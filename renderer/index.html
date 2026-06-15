@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Badminton Coach Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path>
+            <path d="M12 6a6 6 0 0 1 6 6m-12 0a6 6 0 0 1 6-6"></path>
+            <circle cx="12" cy="12" r="2"></circle>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h2>BMT Tutor</h2>
+          <span>Coach Assistant v1.0</span>
+        </div>
+      </div>
+
+      <nav class="nav-links">
+        <button class="nav-btn active" data-tab="dashboard">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+          <span>Tổng Quan</span>
+        </button>
+        <button class="nav-btn" data-tab="students">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          <span>Học Viên</span>
+        </button>
+        <button class="nav-btn" data-tab="schedules">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <span>Lịch Rảnh</span>
+        </button>
+        <button class="nav-btn" data-tab="optimizer">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <span>Tối Ưu Lịch</span>
+        </button>
+        <button class="nav-btn" data-tab="ai-assistant">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+          <span>AI Giáo Án</span>
+        </button>
+        <button class="nav-btn" data-tab="settings">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <span>Cấu Hình</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <p>BMT Tutor © 2026</p>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <header class="app-header">
+        <div class="header-title">
+          <h1 id="page-title">Tổng Quan Dashboard</h1>
+        </div>
+        <div class="header-status">
+          <div class="status-indicator">
+            <span class="dot online"></span>
+            <span class="status-text">Đã kết nối cơ sở dữ liệu</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- TAB Content: Dashboard -->
+      <section id="tab-dashboard" class="tab-pane active">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon bg-blue">
+              <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+            </div>
+            <div class="stat-details">
+              <h3 id="stat-total-students">0</h3>
+              <p>Tổng học viên</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon bg-green">
+              <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+            </div>
+            <div class="stat-details">
+              <h3 id="stat-paid-students">0</h3>
+              <p>Đã đóng học phí</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon bg-yellow">
+              <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            </div>
+            <div class="stat-details">
+              <h3 id="stat-pending-tuition">0đ</h3>
+              <p>Tổng nợ học phí</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon bg-purple">
+              <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            </div>
+            <div class="stat-details">
+              <h3 id="stat-avg-progress">0%</h3>
+              <p>Tiến độ mục tiêu 30 ngày</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-sections">
+          <div class="dashboard-panel main-panel">
+            <div class="panel-header">
+              <h3>Tóm tắt trạng thái học viên</h3>
+            </div>
+            <div class="table-container">
+              <table id="dashboard-students-table">
+                <thead>
+                  <tr>
+                    <th>Học viên</th>
+                    <th>Giới tính</th>
+                    <th>Số buổi còn lại</th>
+                    <th>Vắng không phép</th>
+                    <th>Học phí</th>
+                    <th>Mục tiêu 30 ngày</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Filled dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="dashboard-panel side-panel">
+            <div class="panel-header">
+              <h3>Lớp học có thể mở nhiều nhất</h3>
+            </div>
+            <div class="recommended-slots" id="dashboard-recommended-slots">
+              <p class="empty-msg">Chưa có đủ dữ liệu lịch học để phân tích.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB Content: Students -->
+      <section id="tab-students" class="tab-pane">
+        <div class="students-actions-bar">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="student-search-input" placeholder="Tìm tên học viên, đặc điểm...">
+          </div>
+          <button class="btn btn-primary" id="btn-open-add-student-modal">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>Thêm Học Viên Mới</span>
+          </button>
+        </div>
+
+        <div class="students-grid" id="students-grid-container">
+          <!-- Dynamically filled with student cards -->
+        </div>
+      </section>
+
+      <!-- TAB Content: Schedules -->
+      <section id="tab-schedules" class="tab-pane">
+        <div class="schedule-tab-layout">
+          <div class="schedule-selector-sidebar">
+            <h3>Chọn đối tượng cài đặt</h3>
+            <div class="list-group" id="schedule-target-list">
+              <button class="list-group-item active" data-schedule-target="coach">
+                <div class="target-title">Lịch rảnh của Coach (Tôi)</div>
+              </button>
+              <!-- Dinamically injected student list -->
+            </div>
+          </div>
+
+          <div class="schedule-grid-container">
+            <div class="schedule-grid-header">
+              <h3 id="schedule-grid-title">Thời gian biểu rảnh của Coach</h3>
+              <p>Bấm/Kéo chuột vào các khung giờ để chọn (màu xanh lá = Rảnh). Lịch rảnh sẽ tự động lưu.</p>
+            </div>
+
+            <div class="schedule-timeline-container">
+              <div class="timeline-grid" id="interactive-schedule-grid">
+                <!-- Injected dynamically in script: 7 columns (Mon-Sun), 17 rows (5:00 - 22:00) -->
+              </div>
+            </div>
+            
+            <div class="schedule-legend">
+              <div class="legend-item"><span class="legend-box available"></span> Rảnh</div>
+              <div class="legend-item"><span class="legend-box unavailable"></span> Bận / Không dạy</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB Content: Optimizer -->
+      <section id="tab-optimizer" class="tab-pane">
+        <div class="optimizer-layout">
+          <div class="optimizer-intro-panel">
+            <div class="intro-icon">
+              <svg viewBox="0 0 24 24" width="48" height="48" stroke="var(--accent-primary)" stroke-width="1.5" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+            <div class="intro-text">
+              <h2>Bộ Tối Ưu Lịch Học</h2>
+              <p>Thuật toán tự động đối chiếu lịch rảnh của bạn (Coach) với toàn bộ lịch rảnh của học viên. Kết quả sẽ hiển thị các khung giờ có số học viên rảnh nhiều nhất giúp bạn tối ưu hóa thời gian mở lớp dạy.</p>
+            </div>
+          </div>
+
+          <div class="optimizer-results-grid">
+            <div class="opt-panel opt-ranking">
+              <div class="panel-header">
+                <h3>Khung giờ phù hợp nhất (Xếp hạng)</h3>
+              </div>
+              <div class="opt-list" id="optimizer-rankings-list">
+                <!-- Filled dynamically -->
+              </div>
+            </div>
+
+            <div class="opt-panel opt-details">
+              <div class="panel-header">
+                <h3>Chi tiết học viên rảnh vào khung giờ</h3>
+              </div>
+              <div class="selected-slot-details" id="optimizer-slot-details">
+                <p class="empty-msg">Chọn một khung giờ ở cột bên trái để xem danh sách chi tiết học viên.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB Content: AI Assistant -->
+      <section id="tab-ai-assistant" class="tab-pane">
+        <div class="ai-layout">
+          <div class="ai-control-panel">
+            <h3>Cấu hình sinh giáo án</h3>
+            
+            <div class="form-group">
+              <label for="ai-student-select">Chọn Học Viên Mục Tiêu</label>
+              <select id="ai-student-select" class="form-control">
+                <option value="">-- Chọn học viên --</option>
+                <!-- Injected dynamically -->
+              </select>
+            </div>
+
+            <div class="student-mini-profile" id="ai-student-mini-profile" style="display: none;">
+              <!-- Mini info preview -->
+            </div>
+
+            <div class="form-group">
+              <label>Loại Giáo Án Cần Tạo</label>
+              <div class="radio-options">
+                <label class="radio-container">
+                  <input type="radio" name="ai-type" value="90min" checked>
+                  <span class="checkmark"></span>
+                  <div class="radio-label">
+                    <strong>Bài tập 90 phút</strong>
+                    <span>Thiết kế chi tiết buổi tập 90 phút cho học viên</span>
+                  </div>
+                </label>
+                <label class="radio-container">
+                  <input type="radio" name="ai-type" value="1month">
+                  <span class="checkmark"></span>
+                  <div class="radio-label">
+                    <strong>Giáo án 1 tháng</strong>
+                    <span>Giáo án 4 tuần để đạt mục tiêu 30 ngày</span>
+                  </div>
+                </label>
+                <label class="radio-container">
+                  <input type="radio" name="ai-type" value="teambuilding">
+                  <span class="checkmark"></span>
+                  <div class="radio-label">
+                    <strong>Trò chơi Khởi động / Teambuilding</strong>
+                    <span>Gợi ý 3 trò chơi cho lớp vui nhộn, gắn kết</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="ai-custom-prompt">Yêu cầu bổ sung (nếu có)</label>
+              <textarea id="ai-custom-prompt" rows="3" class="form-control" placeholder="Ví dụ: Tập trung vào đập cầu dọc biên, không sử dụng quá nhiều bài tập thể lực nặng..."></textarea>
+            </div>
+
+            <button class="btn btn-primary btn-block" id="btn-generate-ai">
+              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              <span>Bắt Đầu Tạo Giáo Án AI</span>
+            </button>
+          </div>
+
+          <div class="ai-output-panel">
+            <div class="panel-header">
+              <h3>Nội Dung Giáo Án Tạo Từ AI</h3>
+              <div class="header-actions">
+                <button class="btn btn-secondary btn-sm" id="btn-copy-ai-output" style="display: none;">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span>Sao chép</span>
+                </button>
+              </div>
+            </div>
+            
+            <div class="ai-output-content" id="ai-output-container">
+              <div class="ai-empty-state">
+                <div class="ai-empty-icon">
+                  <svg viewBox="0 0 24 24" width="60" height="60" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline></svg>
+                </div>
+                <h3>Sẵn sàng tạo nội dung</h3>
+                <p>Chọn học viên và bấm nút "Bắt đầu tạo giáo án AI". Hệ thống sẽ cá nhân hóa bài tập dựa trên điểm mạnh, điểm yếu, giới tính và đặc điểm của học viên đó.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB Content: Settings -->
+      <section id="tab-settings" class="tab-pane">
+        <div class="settings-layout">
+          <div class="settings-card">
+            <h3>Cấu hình AI API</h3>
+            <p class="settings-desc">Cấu hình khóa API Google Gemini hoặc OpenAI để sử dụng tính năng sinh bài tập.</p>
+            
+            <div class="form-group">
+              <label for="settings-api-provider">Nhà cung cấp AI</label>
+              <select id="settings-api-provider" class="form-control">
+                <option value="gemini">Google Gemini</option>
+                <option value="openai">OpenAI</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="settings-api-key">API Key</label>
+              <input type="password" id="settings-api-key" class="form-control" placeholder="Nhập API key của bạn...">
+            </div>
+
+            <div class="form-group">
+              <label for="settings-api-model">Model AI</label>
+              <select id="settings-api-model" class="form-control">
+                <!-- Options filled depending on provider -->
+              </select>
+            </div>
+
+            <button class="btn btn-primary" id="btn-save-ai-settings">Lưu Cấu Hình AI</button>
+          </div>
+
+          <div class="settings-card">
+            <h3>Mục tiêu 30 ngày mặc định</h3>
+            <p class="settings-desc">Danh sách nhiệm vụ/bài tập mặc định khi bạn tạo một học viên mới. Mỗi dòng là một bài học/mục tiêu.</p>
+            <div class="form-group">
+              <textarea id="settings-default-tasks" rows="10" class="form-control" placeholder="Mỗi mục tiêu một dòng"></textarea>
+            </div>
+            <button class="btn btn-primary" id="btn-save-tasks-settings">Lưu Danh Sách Mặc Định</button>
+          </div>
+
+          <div class="settings-card">
+            <h3>Liên kết Git & GitHub</h3>
+            <p class="settings-desc">Dự án đã cấu hình liên kết với repository của bạn:</p>
+            <div class="git-info-box">
+              <strong>Remote GitHub:</strong>
+              <code class="git-url">https://github.com/HoangKyAnh05/Tool_BadmintonTutor.git</code>
+              
+              <div class="git-steps">
+                <h4>Các bước để push lên GitHub cá nhân của bạn:</h4>
+                <ol>
+                  <li>Mở <strong>PowerShell</strong> tại thư mục dự án này.</li>
+                  <li>Nếu chưa cấu hình tài khoản git, chạy lệnh:
+                    <pre><code>git config --global user.name "HoangKyAnh05"
+git config --global user.email "hoangkyanh.email@example.com"</code></pre>
+                  </li>
+                  <li>Chạy setup script hoặc đẩy trực tiếp bằng lệnh:
+                    <pre><code>git add .
+git commit -m "Initial commit for badminton coach app"
+git push -u origin main</code></pre>
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: Add/Edit Student -->
+  <div class="modal-backdrop" id="student-modal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="student-modal-title">Thêm Học Viên Mới</h3>
+        <button class="modal-close-btn" id="btn-close-student-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="student-form">
+          <input type="hidden" id="student-id">
+          
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="student-name">Tên học viên <span class="required">*</span></label>
+              <input type="text" id="student-name" class="form-control" required placeholder="Nguyễn Văn A">
+            </div>
+            <div class="form-group col-6">
+              <label for="student-gender">Giới tính</label>
+              <select id="student-gender" class="form-control">
+                <option value="Nam">Nam</option>
+                <option value="Nữ">Nữ</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="student-phone">Số điện thoại / Thông tin liên hệ</label>
+            <input type="text" id="student-phone" class="form-control" placeholder="SĐT, Zalo hoặc Facebook học viên">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-4">
+              <label for="student-tuition">Tiền học phí (VNĐ)</label>
+              <input type="number" id="student-tuition" class="form-control" placeholder="1200000" min="0" step="50000">
+            </div>
+            <div class="form-group col-4">
+              <label for="student-paid">Tiền đã đóng (VNĐ)</label>
+              <input type="number" id="student-paid" class="form-control" placeholder="1200000" min="0" step="50000">
+            </div>
+            <div class="form-group col-4">
+              <label for="student-status">Trạng thái học phí</label>
+              <select id="student-status" class="form-control">
+                <option value="Đã đóng">Đã đóng</option>
+                <option value="Cọc">Cọc</option>
+                <option value="Nợ">Nợ</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-4">
+              <label for="student-total-sessions">Tổng số buổi đăng ký</label>
+              <input type="number" id="student-total-sessions" class="form-control" value="12" min="1">
+            </div>
+            <div class="form-group col-4">
+              <label for="student-used-sessions">Số buổi đã học</label>
+              <input type="number" id="student-used-sessions" class="form-control" value="0" min="0">
+            </div>
+            <div class="form-group col-4">
+              <label for="student-unexcused-absences">Buổi nghỉ KHÔNG phép</label>
+              <input type="number" id="student-unexcused-absences" class="form-control" value="0" min="0">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="student-strengths">Điểm mạnh học viên</label>
+            <textarea id="student-strengths" rows="2" class="form-control" placeholder="Ví dụ: Cổ tay khỏe, đập cầu tốt, di chuyển linh hoạt..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="student-weaknesses">Điểm yếu học viên</label>
+            <textarea id="student-weaknesses" rows="2" class="form-control" placeholder="Ví dụ: Kỹ thuật backhand yếu, phán đoán điểm rơi kém, thể lực nhanh xuống..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="student-highlights">Đặc điểm nổi bật khác</label>
+            <textarea id="student-highlights" rows="2" class="form-control" placeholder="Ví dụ: Thuận tay trái, nghiêm túc tập luyện, thích lối đánh tấn công..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Nhiệm vụ 30 ngày (Tiến độ học tập)</label>
+            <div class="modal-tasks-list" id="modal-student-tasks-container">
+              <!-- Filled dynamically or on add -->
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-student">Hủy</button>
+        <button class="btn btn-primary" id="btn-save-student">Lưu Thông Tin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dynamic Toast Messages -->
+  <div id="toast-container" class="toast-container"></div>
+  <script src="renderer.js"></script>
+</body>
+</html>

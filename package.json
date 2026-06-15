@@ -1,0 +1,22 @@
+{
+  "name": "badminton-tutor",
+  "version": "1.0.0",
+  "description": "Smart desktop tool for Badminton Coaches to manage students, schedules, attendance, and generate AI plans.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [
+    "badminton",
+    "coach",
+    "tutor",
+    "schedule",
+    "ai",
+    "electron"
+  ],
+  "author": "Badminton Coach",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^30.0.0"
+  }
+}
