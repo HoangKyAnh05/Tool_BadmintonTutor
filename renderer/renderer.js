@@ -238,6 +238,17 @@ const btnApplyTaskTemplate = document.getElementById('btn-apply-task-template');
 const newTaskInput = document.getElementById('new-task-input');
 const btnAddModalTask = document.getElementById('btn-add-modal-task');
 
+// Lesson Prep DOM Elements
+const prepSubject = document.getElementById('prep-subject');
+const prepCustomPrompt = document.getElementById('prep-custom-prompt');
+const btnGeneratePrep = document.getElementById('btn-generate-prep');
+const btnCopyPrepOutput = document.getElementById('btn-copy-prep-output');
+const btnSavePrepHistory = document.getElementById('btn-save-prep-history');
+const btnDownloadPrepOutput = document.getElementById('btn-download-prep-output');
+const prepOutputContainer = document.getElementById('prep-output-container');
+const prepOutputTitle = document.getElementById('prep-output-title');
+const prepHistoryContainer = document.getElementById('prep-history-container');
+
 // Mouse Drag State for Schedule Grid
 let isMouseDown = false;
 let dragAction = true; // true = select/available, false = deselect/unavailable
@@ -260,6 +271,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupOptimizerEvents();
   setupAIEvents();
   setupSettingsEvents();
+  setupLessonPrepEvents();
 
   // Render initial tab
   renderDashboard();
@@ -280,6 +292,7 @@ async function loadData() {
   }
   if (!state.coachAvailability) state.coachAvailability = {};
   if (!state.students) state.students = [];
+  if (!state.preparedLessons) state.preparedLessons = [];
 
   // Pre-fill settings inputs
   settingsApiProvider.value = state.settings.apiProvider || 'gemini';
@@ -336,6 +349,10 @@ function setupNav() {
           pageTitle.innerText = "Trợ Lý Giáo Án AI";
           renderAIAssistantTab();
           break;
+        case 'lesson-prep':
+          pageTitle.innerText = "Chuẩn Bị Bài Học";
+          renderLessonPrepTab();
+          break;
         case 'settings':
           pageTitle.innerText = "Cấu Hình Hệ Thống";
           break;
@@ -365,6 +382,20 @@ function updateModelOptions() {
     const models = [
       { value: 'gpt-4o-mini', text: 'GPT-4o Mini (Nhanh & Rẻ)' },
       { value: 'gpt-4o', text: 'GPT-4o (Thông minh nhất)' }
+    ];
+    models.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.value;
+      opt.innerText = m.text;
+      settingsApiModel.appendChild(opt);
+    });
+  } else if (provider === 'openrouter') {
+    const models = [
+      { value: 'openrouter/free', text: 'Tự động chọn model miễn phí (Khuyên dùng)' },
+      { value: 'meta-llama/llama-3.2-3b-instruct:free', text: 'Llama 3.2 3B (Free)' },
+      { value: 'meta-llama/llama-3.1-8b-instruct:free', text: 'Llama 3.1 8B (Free)' },
+      { value: 'qwen/qwen-2-7b-instruct:free', text: 'Qwen 2 7B (Free)' },
+      { value: 'google/gemini-2.5-pro', text: 'Gemini 2.5 Pro (Paid)' }
     ];
     models.forEach(m => {
       const opt = document.createElement('option');
@@ -1362,6 +1393,15 @@ function parseMarkdownToHTML(md) {
 
   let html = md;
 
+  // Escape HTML entities to avoid issues but keep markdown intact
+  html = html
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // Re-allow blockquotes since they use >
+  html = html.replace(/^&gt; (.*?)$/gm, '<blockquote>$1</blockquote>');
+
   // Headers
   html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
   html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
@@ -1370,18 +1410,18 @@ function parseMarkdownToHTML(md) {
   // Bold
   html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-  // Blockquotes
-  html = html.replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>');
+  // Markdown Links: [Link text](url)
+  html = html.replace(/\[(.*?)\]\((.*?)\)/g, (match, text, url) => {
+    const cleanUrl = url.replace(/&amp;/g, '&');
+    return `<a href="${cleanUrl}" target="_blank">${text}</a>`;
+  });
 
   // Bullet Lists
-  // Replace leading dashes with list elements
   html = html.replace(/^\- (.*?)$/gm, '<li>$1</li>');
   html = html.replace(/^\* (.*?)$/gm, '<li>$1</li>');
 
   // Wrap li elements in ul
-  // Let's do a simple wrap by finding contiguous blocks of <li>
   html = html.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
-  // Sometimes it wraps everything if not careful, but for structured prompt output it is fine
 
   // Linebreaks
   html = html.replace(/\n\n/g, '<br>');
@@ -1389,3 +1429,264 @@ function parseMarkdownToHTML(md) {
 
   return html;
 }
+
+// Lesson Prep feature state & logic
+let currentPrepResult = null;
+let activePrepHistoryId = null;
+
+function renderLessonPrepTab() {
+  renderPrepHistoryList();
+  if (!activePrepHistoryId) {
+    showPrepEmptyState();
+  }
+}
+
+function showPrepEmptyState() {
+  prepOutputContainer.innerHTML = `
+    <div class="ai-empty-state">
+      <div class="ai-empty-icon">
+        <svg viewBox="0 0 24 24" width="60" height="60" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+      </div>
+      <h3>Sẵn sàng chuẩn bị bài học</h3>
+      <p>Nhập môn học/chủ đề và yêu cầu chuẩn bị của bạn ở cột trái, sau đó bấm nút "Chuẩn Bị Ngay". Hệ thống sẽ tạo đầy đủ tài liệu, slide dạng chữ, kịch bản thuyết trình, các liên kết tự học và YouTube liên quan.</p>
+    </div>
+  `;
+  prepOutputTitle.innerText = "Tài Liệu Bài Học Chuẩn Bị";
+  btnCopyPrepOutput.style.display = 'none';
+  btnSavePrepHistory.style.display = 'none';
+  btnDownloadPrepOutput.style.display = 'none';
+}
+
+function renderPrepHistoryList() {
+  prepHistoryContainer.innerHTML = '';
+  if (!state.preparedLessons || state.preparedLessons.length === 0) {
+    prepHistoryContainer.innerHTML = '<p class="empty-msg" style="padding: 10px 0; color: var(--text-muted); font-size: 13px; text-align: center;">Chưa có bài học nào được chuẩn bị.</p>';
+    return;
+  }
+
+  state.preparedLessons.forEach(item => {
+    const div = document.createElement('div');
+    div.className = `prep-history-item ${activePrepHistoryId === item.id ? 'active' : ''}`;
+    
+    div.innerHTML = `
+      <div class="prep-history-info">
+        <strong>${item.subject}</strong>
+        <span>${item.date}</span>
+      </div>
+      <div class="prep-history-actions">
+        <button type="button" class="btn-delete-prep" title="Xóa">&times;</button>
+      </div>
+    `;
+
+    // Click to load
+    div.addEventListener('click', (e) => {
+      if (e.target.classList.contains('btn-delete-prep')) return;
+      selectPrepHistoryItem(item.id);
+    });
+
+    // Click to delete
+    div.querySelector('.btn-delete-prep').addEventListener('click', (e) => {
+      e.stopPropagation();
+      deletePrepHistoryItem(item.id);
+    });
+
+    prepHistoryContainer.appendChild(div);
+  });
+}
+
+function selectPrepHistoryItem(id) {
+  activePrepHistoryId = id;
+  const item = state.preparedLessons.find(p => p.id === id);
+  if (!item) return;
+
+  // Refresh list to update active styling
+  renderPrepHistoryList();
+
+  // Fill inputs
+  prepSubject.value = item.subject;
+  prepCustomPrompt.value = item.query;
+
+  // Render contents
+  prepOutputTitle.innerText = `Bài Chuẩn Bị: ${item.subject}`;
+  prepOutputContainer.innerHTML = parseMarkdownToHTML(item.content);
+
+  // Show actions
+  currentPrepResult = {
+    subject: item.subject,
+    query: item.query,
+    content: item.content
+  };
+
+  btnCopyPrepOutput.style.display = 'inline-flex';
+  btnSavePrepHistory.style.display = 'none'; // Already saved
+  btnDownloadPrepOutput.style.display = 'inline-flex';
+
+  // Bind actions
+  btnCopyPrepOutput.onclick = () => {
+    navigator.clipboard.writeText(item.content);
+    showToast("Đã sao chép nội dung bài chuẩn bị vào Clipboard!", "success");
+  };
+
+  btnDownloadPrepOutput.onclick = () => {
+    downloadPrepFile(item.subject, item.content);
+  };
+}
+
+async function deletePrepHistoryItem(id) {
+  if (confirm("Bạn có chắc chắn muốn xóa bài chuẩn bị này?")) {
+    state.preparedLessons = state.preparedLessons.filter(p => p.id !== id);
+    if (activePrepHistoryId === id) {
+      activePrepHistoryId = null;
+      currentPrepResult = null;
+      showPrepEmptyState();
+    }
+    await saveData();
+    showToast("Đã xóa bài chuẩn bị.", "info");
+    renderPrepHistoryList();
+  }
+}
+
+function downloadPrepFile(subject, content) {
+  try {
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const safeSubject = subject.replace(/[^a-zA-Z0-9 Vietnamese_]/g, "").replace(/\s+/g, "_");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Lesson_Prep_${safeSubject}.md`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Tải file Markdown thành công!", "success");
+  } catch (e) {
+    showToast("Không thể tải file: " + e.message, "error");
+  }
+}
+
+function setupLessonPrepEvents() {
+  // Quick prompt buttons
+  const quickButtons = document.querySelectorAll('.prep-quick-btn');
+  quickButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      prepCustomPrompt.value = btn.getAttribute('data-query');
+    });
+  });
+
+  // Generate button
+  btnGeneratePrep.addEventListener('click', async () => {
+    const subject = prepSubject.value.trim();
+    let query = prepCustomPrompt.value.trim();
+    
+    if (!subject) {
+      showToast("Vui lòng nhập môn học hoặc chủ đề!", "warning");
+      return;
+    }
+
+    if (!query) {
+      query = "Ngày mai tôi cần học gì, cần chuẩn bị gì cho bài học này?";
+      prepCustomPrompt.value = query;
+    }
+
+    // Show loader
+    prepOutputContainer.innerHTML = `
+      <div class="ai-empty-state">
+        <div class="ai-empty-icon">
+          <svg class="spinner" viewBox="0 0 24 24" width="48" height="48" stroke="var(--accent-secondary)" stroke-width="3" fill="none" style="animation: spin 1s linear infinite;">
+            <circle cx="12" cy="12" r="10"></circle>
+          </svg>
+        </div>
+        <h3>Đang lập đề cương & chuẩn bị bài học...</h3>
+        <p>Hệ thống AI đang tổng hợp slide bài giảng, kịch bản thuyết trình, tài liệu tham khảo và tìm kiếm video YouTube hữu ích cho bạn.</p>
+      </div>
+    `;
+    btnCopyPrepOutput.style.display = 'none';
+    btnSavePrepHistory.style.display = 'none';
+    btnDownloadPrepOutput.style.display = 'none';
+
+    // Build Prompt
+    const detailedPrompt = `
+Hãy đóng vai là một Trợ lý Giáo vụ/Giảng viên chuyên nghiệp và thông minh. Hãy giúp tôi chuẩn bị bài học đầy đủ và chi tiết cho môn học/chủ đề sau.
+Môn học/Chủ đề: ${subject}
+Yêu cầu cụ thể: ${query}
+
+Hãy tạo ra một bộ tài liệu chuẩn bị bài học hoàn chỉnh bao gồm các mục sau (sử dụng định dạng Markdown đẹp, rõ ràng):
+1. **📘 Tài liệu học tập (Study Documents):** Tóm tắt lý thuyết, nội dung cốt lõi của bài học cần nắm vững, kèm định nghĩa và các tài liệu tham khảo chính.
+2. **📊 Slide bài giảng (bằng chữ) (Lecture Slides):** Thiết kế chi tiết từng slide bài giảng (từ 5-8 slide) dưới dạng text, mỗi slide ghi rõ tiêu đề và các ý chính (bullet points) để giảng dạy hoặc thuyết trình.
+3. **📜 Kịch bản nói/Giảng dạy (Scripts):** Kịch bản nói chi tiết cho giảng viên hoặc học viên để thuyết trình/trình bày/học tập phần kiến thức này một cách tự nhiên.
+4. **🌐 Link học trước (Pre-study links):** Gợi ý các từ khóa chất lượng để tìm kiếm tự học kèm liên kết tìm kiếm trực tiếp trên Google dạng Markdown (ví dụ: [Tìm hiểu trên Google](https://www.google.com/search?q=${encodeURIComponent(subject + ' ' + query)})) để học trước phần kiến thức đó.
+5. **🎥 Link video YouTube (Youtube Videos):** Cung cấp từ khóa tìm kiếm YouTube và liên kết tìm kiếm trực tiếp trên YouTube dạng Markdown để xem video bài giảng/thực hành liên quan (ví dụ: [Xem video YouTube](https://www.youtube.com/results?search_query=${encodeURIComponent(subject + ' ' + query)})) để đảm bảo link luôn hoạt động và cập nhật các video chất lượng mới nhất.
+6. **ℹ️ Thông tin liên quan bài học (Related Information):** Các lưu ý quan trọng, bài tập tự luyện thêm, hoặc mẹo ghi nhớ nhanh phần kiến thức đó.
+
+Đầu ra viết bằng tiếng Việt, định dạng Markdown chuyên nghiệp, rõ ràng, không viết các câu mở đầu/kết thúc thừa thãi.
+`;
+
+    try {
+      const result = await window.api.callAI({
+        provider: state.settings.apiProvider,
+        apiKey: state.settings.apiKey,
+        model: state.settings.aiModel,
+        prompt: detailedPrompt
+      });
+
+      if (result.success) {
+        prepOutputTitle.innerText = `Bài Chuẩn Bị: ${subject}`;
+        prepOutputContainer.innerHTML = parseMarkdownToHTML(result.text);
+
+        currentPrepResult = {
+          subject: subject,
+          query: query,
+          content: result.text
+        };
+
+        // Show action buttons
+        btnCopyPrepOutput.style.display = 'inline-flex';
+        btnSavePrepHistory.style.display = 'inline-flex';
+        btnDownloadPrepOutput.style.display = 'inline-flex';
+
+        // Bind Copy
+        btnCopyPrepOutput.onclick = () => {
+          navigator.clipboard.writeText(result.text);
+          showToast("Đã sao chép nội dung bài chuẩn bị vào Clipboard!", "success");
+        };
+
+        // Bind Save
+        btnSavePrepHistory.onclick = async () => {
+          if (!currentPrepResult) return;
+          const newPrep = {
+            id: Date.now().toString(),
+            subject: currentPrepResult.subject,
+            query: currentPrepResult.query,
+            content: currentPrepResult.content,
+            date: new Date().toLocaleString('vi-VN')
+          };
+          state.preparedLessons.push(newPrep);
+          activePrepHistoryId = newPrep.id;
+          await saveData();
+          showToast("Đã lưu bài chuẩn bị thành công!", "success");
+          renderPrepHistoryList();
+          btnSavePrepHistory.style.display = 'none'; // Saved, hide save button
+        };
+
+        // Bind Download
+        btnDownloadPrepOutput.onclick = () => {
+          downloadPrepFile(subject, result.text);
+        };
+
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      console.error(err);
+      prepOutputContainer.innerHTML = `
+        <div class="ai-empty-state">
+          <div class="ai-empty-icon" style="color: var(--accent-red)">
+            <svg viewBox="0 0 24 24" width="60" height="60" stroke="currentColor" stroke-width="1.5" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          </div>
+          <h3>Lỗi kết nối AI</h3>
+          <p>${err.message || "Đã xảy ra lỗi không xác định khi kết nối với máy chủ AI. Vui lòng kiểm tra khóa API và kết nối Internet của bạn tại phần Cấu Hình."}</p>
+        </div>
+      `;
+    }
+  });
+}
+

@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
 
 let mainWindow;
 const DATA_FILE_PATH = path.join(app.getPath('userData'), 'badminton_tutor_data.json');
@@ -36,6 +37,14 @@ function createWindow() {
   
   // Open devtools in development mode if needed
   // mainWindow.webContents.openDevTools();
+
+  // Open external links in default browser
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('http:') || url.startsWith('https:')) {
+      require('electron').shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
@@ -90,16 +99,60 @@ ipcMain.handle('save-data', (event, data) => {
   }
 });
 
+// Helper function to make HTTPS requests without external dependencies
+function makeHttpsRequest(url, options) {
+  return new Promise((resolve, reject) => {
+    const parsedUrl = new URL(url);
+    const requestOptions = {
+      method: options.method || 'GET',
+      headers: options.headers || {},
+      hostname: parsedUrl.hostname,
+      path: parsedUrl.pathname + parsedUrl.search,
+      port: 443
+    };
+
+    const req = https.request(requestOptions, (res) => {
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        resolve({
+          ok: res.statusCode >= 200 && res.statusCode < 300,
+          status: res.statusCode,
+          text: async () => data,
+          json: async () => {
+            try {
+              return JSON.parse(data);
+            } catch (e) {
+              throw new Error("Failed to parse JSON response: " + e.message + "\nResponse content: " + data);
+            }
+          }
+        });
+      });
+    });
+
+    req.on('error', (err) => {
+      reject(err);
+    });
+
+    if (options.body) {
+      req.write(options.body);
+    }
+    req.end();
+  });
+}
+
 // IPC Handler: Call AI API
 ipcMain.handle('call-ai', async (event, { provider, apiKey, model, prompt }) => {
   try {
     const key = apiKey || DEFAULT_DATA.settings.apiKey;
     if (provider === 'gemini') {
       const selectedModel = model || 'gemini-2.5-flash';
-      // Use direct fetch call to avoid native sdk issues
+      // Use direct custom request to avoid native sdk and fetch dns issues
       const url = `https://generativelanguage.googleapis.com/v1/models/${selectedModel}:generateContent`;
       
-      const response = await fetch(url, {
+      const response = await makeHttpsRequest(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,7 +180,7 @@ ipcMain.handle('call-ai', async (event, { provider, apiKey, model, prompt }) => 
       const selectedModel = model || 'gpt-4o-mini';
       const url = 'https://api.openai.com/v1/chat/completions';
       
-      const response = await fetch(url, {
+      const response = await makeHttpsRequest(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -149,6 +202,35 @@ ipcMain.handle('call-ai', async (event, { provider, apiKey, model, prompt }) => 
         return { success: true, text: json.choices[0].message.content };
       } else {
         throw new Error("Invalid structure returned from OpenAI API");
+      }
+    } else if (provider === 'openrouter') {
+      const selectedModel = model || 'google/gemini-2.5-flash:free';
+      const url = 'https://openrouter.ai/api/v1/chat/completions';
+      
+      const response = await makeHttpsRequest(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`,
+          'HTTP-Referer': 'https://github.com/HoangKyAnh05/Tool_BadmintonTutor',
+          'X-Title': 'Badminton Tutor Smart'
+        },
+        body: JSON.stringify({
+          model: selectedModel,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`OpenRouter API Error (${response.status}): ${errText}`);
+      }
+
+      const json = await response.json();
+      if (json.choices && json.choices[0] && json.choices[0].message) {
+        return { success: true, text: json.choices[0].message.content };
+      } else {
+        throw new Error("Invalid structure returned from OpenRouter API");
       }
     } else {
       throw new Error(`Unknown AI Provider: ${provider}`);
