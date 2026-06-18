@@ -6,7 +6,7 @@ echo    DANG TAO SHORTCUT CHO BADMINTON TUTOR TREN DESKTOP...
 echo ==========================================================
 echo.
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut([System.IO.Path]::Combine([System.Environment]::GetFolderPath('Desktop'), 'Badminton Tutor.lnk')); $Shortcut.TargetPath = '%~dp0run.bat'; $Shortcut.WorkingDirectory = '%~dp0'; $Shortcut.IconLocation = '%~dp0node_modules\electron\dist\electron.exe, 0'; $Shortcut.Save()"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut([System.IO.Path]::Combine([System.Environment]::GetFolderPath('Desktop'), 'Badminton Tutor.lnk')); $Shortcut.TargetPath = 'wscript.exe'; $Shortcut.Arguments = '\"%~dp0run.vbs\"'; $Shortcut.WorkingDirectory = '%~dp0'; $Shortcut.IconLocation = '%~dp0node_modules\electron\dist\electron.exe, 0'; $Shortcut.Save()"
 
 echo [OK] Da tao shortcut "Badminton Tutor" tren Desktop cua ban!
 echo.

@@ -55,6 +55,13 @@
           </svg>
           <span>Chuẩn Bị Bài</span>
         </button>
+        <button class="nav-btn" data-tab="quick-notes">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          </svg>
+          <span>Ghi Nhớ & Link</span>
+        </button>
         <button class="nav-btn" data-tab="settings">
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           <span>Cấu Hình</span>
@@ -391,6 +398,26 @@
         </div>
       </section>
 
+      <!-- TAB Content: Quick Notes & Links -->
+      <section id="tab-quick-notes" class="tab-pane">
+        <div class="notes-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px;">
+          <div class="notes-search-container" style="position: relative; flex: 1; max-width: 400px;">
+            <input type="text" id="notes-search-input" class="form-control" placeholder="Tìm kiếm ghi nhớ, liên kết..." style="padding-left: 35px; height: 40px; font-size: 13px;">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 12px; color: var(--text-muted);">
+              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
+          <button class="btn btn-primary" id="btn-add-quick-note" style="display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px;">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>Thêm Ghi Nhớ Mới</span>
+          </button>
+        </div>
+
+        <div class="notes-grid" id="notes-grid-container">
+          <!-- Filled dynamically with cards -->
+        </div>
+      </section>
+
       <!-- TAB Content: Settings -->
       <section id="tab-settings" class="tab-pane">
         <div class="settings-layout">
@@ -574,6 +601,40 @@ git push -u origin main</code></pre>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="btn-cancel-student">Hủy</button>
         <button class="btn btn-primary" id="btn-save-student">Lưu Thông Tin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Add/Edit Quick Note -->
+  <div class="modal-backdrop" id="note-modal" style="display: none;">
+    <div class="modal-card" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 id="note-modal-title">Thêm Ghi Nhớ Mới</h3>
+        <button class="modal-close-btn" id="btn-close-note-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="note-form">
+          <input type="hidden" id="note-id">
+          
+          <div class="form-group">
+            <label for="note-title">Tiêu đề ghi nhớ <span class="required">*</span></label>
+            <input type="text" id="note-title" class="form-control" required placeholder="Ví dụ: Link tài liệu IELTS nâng cao, Trang admin...">
+          </div>
+
+          <div class="form-group">
+            <label for="note-url">Đường dẫn trang web (Link) <span class="settings-desc" style="display: inline; font-size: 11px;">(Bắt đầu bằng http:// hoặc https://)</span></label>
+            <input type="url" id="note-url" class="form-control" placeholder="https://example.com/tai-lieu">
+          </div>
+
+          <div class="form-group">
+            <label for="note-content">Hướng dẫn / Ghi chú chi tiết</label>
+            <textarea id="note-content" rows="6" class="form-control" placeholder="Viết các hướng dẫn hoặc ghi chú của bạn tại đây để ghi nhớ..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-note">Hủy</button>
+        <button class="btn btn-primary" id="btn-save-note">Lưu Ghi Nhớ</button>
       </div>
     </div>
   </div>

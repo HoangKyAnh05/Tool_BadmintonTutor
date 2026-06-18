@@ -119,7 +119,9 @@ let state = {
     defaultTasks: []
   },
   coachAvailability: {}, // { "Mon-08:00": true }
-  students: []
+  students: [],
+  preparedLessons: [],
+  quickNotes: []
 };
 
 // Default Tasks list
@@ -249,6 +251,20 @@ const prepOutputContainer = document.getElementById('prep-output-container');
 const prepOutputTitle = document.getElementById('prep-output-title');
 const prepHistoryContainer = document.getElementById('prep-history-container');
 
+// Quick Notes DOM Elements
+const btnAddQuickNote = document.getElementById('btn-add-quick-note');
+const notesSearchInput = document.getElementById('notes-search-input');
+const notesGridContainer = document.getElementById('notes-grid-container');
+const noteModal = document.getElementById('note-modal');
+const btnCloseNoteModal = document.getElementById('btn-close-note-modal');
+const btnCancelNote = document.getElementById('btn-cancel-note');
+const btnSaveNote = document.getElementById('btn-save-note');
+const noteForm = document.getElementById('note-form');
+const noteId = document.getElementById('note-id');
+const noteTitle = document.getElementById('note-title');
+const noteUrl = document.getElementById('note-url');
+const noteContent = document.getElementById('note-content');
+
 // Mouse Drag State for Schedule Grid
 let isMouseDown = false;
 let dragAction = true; // true = select/available, false = deselect/unavailable
@@ -272,6 +288,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupAIEvents();
   setupSettingsEvents();
   setupLessonPrepEvents();
+  setupQuickNotesEvents();
 
   // Render initial tab
   renderDashboard();
@@ -293,6 +310,7 @@ async function loadData() {
   if (!state.coachAvailability) state.coachAvailability = {};
   if (!state.students) state.students = [];
   if (!state.preparedLessons) state.preparedLessons = [];
+  if (!state.quickNotes) state.quickNotes = [];
 
   // Pre-fill settings inputs
   settingsApiProvider.value = state.settings.apiProvider || 'gemini';
@@ -352,6 +370,10 @@ function setupNav() {
         case 'lesson-prep':
           pageTitle.innerText = "Chuẩn Bị Bài Học";
           renderLessonPrepTab();
+          break;
+        case 'quick-notes':
+          pageTitle.innerText = "Sổ Tay Ghi Nhớ & Link";
+          renderQuickNotes();
           break;
         case 'settings':
           pageTitle.innerText = "Cấu Hình Hệ Thống";
@@ -1687,6 +1709,201 @@ Hãy tạo ra một bộ tài liệu chuẩn bị bài học hoàn chỉnh bao g
         </div>
       `;
     }
+  });
+}
+
+// Render Ghi Nhớ & Link Grid
+function renderQuickNotes(searchQuery = '') {
+  notesGridContainer.innerHTML = '';
+  const query = searchQuery.trim().toLowerCase();
+  
+  const filteredNotes = state.quickNotes.filter(note => {
+    return note.title.toLowerCase().includes(query) || 
+           (note.content && note.content.toLowerCase().includes(query)) ||
+           (note.url && note.url.toLowerCase().includes(query));
+  });
+
+  if (filteredNotes.length === 0) {
+    notesGridContainer.innerHTML = `
+      <div class="ai-empty-state" style="grid-column: 1 / -1; min-height: 250px; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px dashed var(--border-color); border-radius: 12px; padding: 30px; margin-top: 10px;">
+        <div class="ai-empty-icon" style="margin-bottom: 15px;">
+          <svg viewBox="0 0 24 24" width="50" height="50" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        </div>
+        <h3>Không tìm thấy ghi nhớ nào</h3>
+        <p style="color: var(--text-muted); font-size: 13px; text-align: center; max-width: 400px; margin-top: 5px;">
+          ${searchQuery ? "Thử tìm kiếm với từ khóa khác." : "Hãy bấm nút 'Thêm Ghi Nhớ Mới' để lưu trữ các trang web hoặc hướng dẫn/ghi chú quan trọng bạn hay quên."}
+        </p>
+      </div>
+    `;
+    return;
+  }
+
+  filteredNotes.forEach(note => {
+    const card = document.createElement('div');
+    card.className = 'note-card';
+    card.setAttribute('data-id', note.id);
+
+    // Header title and actions
+    const header = document.createElement('div');
+    header.className = 'note-card-header';
+    
+    const title = document.createElement('h4');
+    title.className = 'note-card-title';
+    title.innerText = note.title;
+    header.appendChild(title);
+
+    const actions = document.createElement('div');
+    actions.className = 'note-card-actions';
+
+    // Edit button
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn-note-action edit';
+    editBtn.title = 'Sửa';
+    editBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openEditNoteModal(note);
+    });
+    actions.appendChild(editBtn);
+
+    // Delete button
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn-note-action delete';
+    deleteBtn.title = 'Xóa';
+    deleteBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`;
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteNote(note.id, note.title);
+    });
+    actions.appendChild(deleteBtn);
+
+    header.appendChild(actions);
+    card.appendChild(header);
+
+    // Body content
+    const body = document.createElement('div');
+    body.className = 'note-card-body';
+    body.innerText = note.content || 'Không có ghi chú chi tiết.';
+    card.appendChild(body);
+
+    // Footer with link (if exists)
+    if (note.url) {
+      const footer = document.createElement('div');
+      footer.className = 'note-card-footer';
+
+      const linkBtn = document.createElement('a');
+      linkBtn.className = 'btn-note-link';
+      linkBtn.href = note.url;
+      linkBtn.target = '_blank';
+      linkBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        <span>Mở Trang Web</span>
+      `;
+      footer.appendChild(linkBtn);
+      card.appendChild(footer);
+    }
+
+    notesGridContainer.appendChild(card);
+  });
+}
+
+// Open Edit Note Modal
+function openEditNoteModal(note) {
+  document.getElementById('note-modal-title').innerText = "Sửa Ghi Nhớ";
+  noteId.value = note.id;
+  noteTitle.value = note.title;
+  noteUrl.value = note.url || '';
+  noteContent.value = note.content || '';
+  noteModal.style.display = 'flex';
+}
+
+// Delete Note
+async function deleteNote(id, title) {
+  if (confirm(`Bạn có chắc chắn muốn xóa ghi nhớ "${title}" không?`)) {
+    state.quickNotes = state.quickNotes.filter(n => n.id !== id);
+    await saveData();
+    showToast("Đã xóa ghi nhớ thành công!", "success");
+    renderQuickNotes(notesSearchInput.value);
+  }
+}
+
+// Setup Event Listeners for Quick Notes
+function setupQuickNotesEvents() {
+  // Live Search
+  notesSearchInput.addEventListener('input', (e) => {
+    renderQuickNotes(e.target.value);
+  });
+
+  // Open Add Modal
+  btnAddQuickNote.addEventListener('click', () => {
+    document.getElementById('note-modal-title').innerText = "Thêm Ghi Nhớ Mới";
+    noteForm.reset();
+    noteId.value = '';
+    noteModal.style.display = 'flex';
+  });
+
+  // Close Modal triggers
+  const closeModal = () => {
+    noteModal.style.display = 'none';
+  };
+  btnCloseNoteModal.addEventListener('click', closeModal);
+  btnCancelNote.addEventListener('click', closeModal);
+
+  // Close modal on background click
+  noteModal.addEventListener('click', (e) => {
+    if (e.target === noteModal) {
+      closeModal();
+    }
+  });
+
+  // Save Note Form Submission
+  btnSaveNote.addEventListener('click', async (e) => {
+    e.preventDefault();
+
+    const titleVal = noteTitle.value.trim();
+    let urlVal = noteUrl.value.trim();
+    const contentVal = noteContent.value.trim();
+
+    if (!titleVal) {
+      showToast("Vui lòng điền tiêu đề ghi nhớ!", "error");
+      noteTitle.focus();
+      return;
+    }
+
+    // Format URL prefix if missing
+    if (urlVal && !urlVal.startsWith('http://') && !urlVal.startsWith('https://')) {
+      urlVal = 'https://' + urlVal;
+    }
+
+    const idVal = noteId.value;
+
+    if (idVal) {
+      // Editing existing note
+      const index = state.quickNotes.findIndex(n => n.id === idVal);
+      if (index !== -1) {
+        state.quickNotes[index] = {
+          ...state.quickNotes[index],
+          title: titleVal,
+          url: urlVal,
+          content: contentVal
+        };
+      }
+    } else {
+      // Adding new note
+      const newNote = {
+        id: Date.now().toString(),
+        title: titleVal,
+        url: urlVal,
+        content: contentVal,
+        date: new Date().toLocaleString('vi-VN')
+      };
+      state.quickNotes.push(newNote);
+    }
+
+    await saveData();
+    showToast("Đã lưu ghi nhớ thành công!", "success");
+    closeModal();
+    renderQuickNotes(notesSearchInput.value);
   });
 }
 
