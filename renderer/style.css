@@ -1816,4 +1816,714 @@ textarea.form-control {
   text-decoration: underline;
 }
 
+/* ==========================================================================
+   TIMETABLE STYLING
+   ========================================================================== */
+.timetable-tab-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+  height: 100%;
+  overflow: hidden;
+}
+
+.timetable-main-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  height: 100%;
+  padding-right: 6px;
+}
+
+.timetable-sidebar-panel {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+/* Calendar Card */
+.calendar-card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.calendar-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.calendar-card-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.calendar-week-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.calendar-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.calendar-day {
+  aspect-ratio: 1.25/1;
+  max-height: 70px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px;
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.calendar-day:hover {
+  border-color: var(--border-hover);
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.calendar-day.active {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 10px rgba(57, 255, 20, 0.15);
+  background-color: rgba(57, 255, 20, 0.02);
+}
+
+.calendar-day.other-month {
+  opacity: 0.25;
+}
+
+.calendar-day .day-num {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.calendar-day.today .day-num {
+  color: var(--accent-secondary);
+  border-bottom: 2px solid var(--accent-secondary);
+}
+
+.calendar-day .day-dots {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  align-items: center;
+  min-height: 6px;
+  width: 100%;
+}
+
+.calendar-day .dot-event {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--accent-secondary);
+}
+
+.calendar-day .dot-finance-in {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--accent-primary);
+}
+
+.calendar-day .dot-finance-out {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--accent-red);
+}
+
+/* Timetable Details / Sub-tabs */
+.timetable-details-container {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-grow: 1;
+}
+
+.timetable-sub-nav {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  background-color: rgba(255, 255, 255, 0.01);
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-shrink: 0;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.timetable-sub-nav::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+.sub-nav-btn {
+  flex: 1;
+  padding: 12px 10px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.sub-nav-btn:hover {
+  color: var(--text-primary);
+}
+
+.sub-nav-btn.active {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.01);
+}
+
+.timetable-sub-content {
+  padding: 20px;
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.timetable-sub-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.timetable-sub-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.timetable-sub-content::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 3px;
+}
+
+.timetable-sub-pane {
+  display: none;
+}
+
+.timetable-sub-pane.active {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sub-pane-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sub-pane-header h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Goals List and Progress */
+.goals-list-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.goal-item-card {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  transition: all var(--transition-normal);
+}
+
+.goal-item-card:hover {
+  border-color: var(--border-hover);
+}
+
+.goal-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.goal-item-header h5 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+  margin-right: 8px;
+}
+
+.goal-item-progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.goal-item-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+/* Future Plans Layout */
+.future-plans-layout {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.future-plan-column {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 300px;
+}
+
+.future-plan-column h5 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+}
+
+.plan-add-row {
+  display: flex;
+  gap: 8px;
+}
+
+.plan-add-row input {
+  flex: 1;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
+}
+
+.plan-add-row input:focus {
+  border-color: var(--border-hover);
+}
+
+.plan-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  flex-grow: 1;
+  max-height: 250px;
+}
+
+.plan-items-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.plan-items-list::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 2px;
+}
+
+.plan-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.plan-item input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
+
+.plan-item span {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  word-break: break-word;
+}
+
+.plan-item.completed span {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.plan-item-delete {
+  background: none;
+  border: none;
+  color: var(--accent-red);
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity var(--transition-fast);
+}
+
+.plan-item-delete:hover {
+  opacity: 1;
+}
+
+/* Finance sub-pane */
+.finance-sub-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.finance-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.finance-metric-card {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.finance-metric-card.income {
+  border-left: 4px solid var(--accent-primary);
+}
+
+.finance-metric-card.income .value {
+  color: var(--accent-primary);
+}
+
+.finance-metric-card.expense {
+  border-left: 4px solid var(--accent-red);
+}
+
+.finance-metric-card.expense .value {
+  color: var(--accent-red);
+}
+
+.finance-metric-card.net {
+  border-left: 4px solid var(--accent-secondary);
+}
+
+.finance-metric-card.net .value {
+  color: var(--accent-secondary);
+}
+
+.finance-metric-card .label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.finance-metric-card .value {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Sidebar Details Styles */
+.selected-day-header {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
+}
+
+.selected-day-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.selected-day-header span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.timetable-sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-events-list h5,
+.sidebar-finance-list h5 {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.sidebar-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.sidebar-list-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-list-container::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 2px;
+}
+
+.day-event-item {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  transition: all var(--transition-fast);
+}
+
+.day-event-item:hover {
+  border-color: var(--border-hover);
+}
+
+.day-event-item input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+  margin-top: 3px;
+}
+
+.day-event-item .event-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.day-event-item .event-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.day-event-item.completed .event-title {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.day-event-item .time-badge {
+  font-size: 11px;
+  color: var(--accent-secondary);
+  font-weight: 600;
+  align-self: flex-start;
+}
+
+.day-event-item .goal-tag {
+  font-size: 10px;
+  color: var(--accent-purple);
+  background-color: rgba(192, 132, 252, 0.08);
+  border: 1px solid rgba(192, 132, 252, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  align-self: flex-start;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.day-event-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-icon-only {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.btn-icon-only:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.btn-icon-only.delete:hover {
+  color: var(--accent-red);
+}
+
+/* Day Finance Item */
+.day-finance-item {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.day-finance-item .finance-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.day-finance-item .finance-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.day-finance-item .finance-type-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.day-finance-item .finance-type-badge.income {
+  color: var(--accent-primary);
+}
+
+.day-finance-item .finance-type-badge.expense {
+  color: var(--accent-red);
+}
+
+.day-finance-item .finance-amount {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.day-finance-item .finance-amount.income {
+  color: var(--accent-primary);
+}
+
+.day-finance-item .finance-amount.expense {
+  color: var(--accent-red);
+}
+
+/* Incomplete Items list */
+.incomplete-item-card {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.incomplete-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.incomplete-item-info strong {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.incomplete-item-info span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Default Config Sub-pane */
+.default-slots-list-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.default-slot-card {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.default-slot-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.default-slot-info strong {
+  font-size: 13.5px;
+  color: var(--text-primary);
+}
+
+.default-slot-info .day-time {
+  font-size: 12px;
+  color: var(--accent-secondary);
+  font-weight: 600;
+}
+
+.section-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
 

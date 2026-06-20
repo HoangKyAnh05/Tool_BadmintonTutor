@@ -269,6 +269,10 @@ const noteContent = document.getElementById('note-content');
 let isMouseDown = false;
 let dragAction = true; // true = select/available, false = deselect/unavailable
 
+// Timetable state variables
+let calendarCurrentDate = new Date();
+let calendarSelectedDate = new Date();
+
 // Initialization
 document.addEventListener('DOMContentLoaded', async () => {
   await loadData();
@@ -311,6 +315,16 @@ async function loadData() {
   if (!state.students) state.students = [];
   if (!state.preparedLessons) state.preparedLessons = [];
   if (!state.quickNotes) state.quickNotes = [];
+
+  // Timetable State Initialization
+  if (!state.timetableEvents) state.timetableEvents = [];
+  if (!state.timetableGoals) state.timetableGoals = [];
+  if (!state.timetableTransactions) state.timetableTransactions = [];
+  if (!state.futurePlans) state.futurePlans = { days10: [], year1: [], years10: [] };
+  if (!state.futurePlans.days10) state.futurePlans.days10 = [];
+  if (!state.futurePlans.year1) state.futurePlans.year1 = [];
+  if (!state.futurePlans.years10) state.futurePlans.years10 = [];
+  if (!state.defaultScheduleEvents) state.defaultScheduleEvents = [];
 
   // Pre-fill settings inputs
   settingsApiProvider.value = state.settings.apiProvider || 'gemini';
@@ -358,6 +372,10 @@ function setupNav() {
         case 'schedules':
           pageTitle.innerText = "Cài Đặt Lịch Rảnh";
           renderSchedulesTab();
+          break;
+        case 'timetable':
+          pageTitle.innerText = "Quản Lý Thời Khóa Biểu";
+          renderTimetableTab();
           break;
         case 'optimizer':
           pageTitle.innerText = "Phân Tích & Tối Ưu Lịch Học";
@@ -1906,4 +1924,1226 @@ function setupQuickNotesEvents() {
     renderQuickNotes(notesSearchInput.value);
   });
 }
+
+// ==========================================================================
+// TIMETABLE & PLAN MANAGEMENT TAB LOGIC
+// ==========================================================================
+let isTimetableEventsBound = false;
+
+function renderTimetableTab() {
+  if (!calendarSelectedDate) {
+    calendarSelectedDate = new Date();
+  }
+  
+  renderCalendar();
+  selectDate(calendarSelectedDate);
+  
+  // Render active sub-tab
+  const activeSubBtn = document.querySelector('.sub-nav-btn.active');
+  if (activeSubBtn) {
+    renderActiveSubTab(activeSubBtn.getAttribute('data-subtab'));
+  } else {
+    renderActiveSubTab('goals');
+  }
+  
+  if (!isTimetableEventsBound) {
+    setupTimetableEvents();
+    isTimetableEventsBound = true;
+  }
+}
+
+function renderCalendar() {
+  const year = calendarCurrentDate.getFullYear();
+  const month = calendarCurrentDate.getMonth();
+  
+  const monthYearLabel = document.getElementById('calendar-current-month-year');
+  monthYearLabel.innerText = `Tháng ${(month + 1).toString().padStart(2, '0')} / ${year}`;
+  
+  const daysGrid = document.getElementById('calendar-days-grid');
+  daysGrid.innerHTML = '';
+  
+  // First day of current month
+  const firstDayIndex = new Date(year, month, 1).getDay(); // Sun=0, Mon=1...
+  // Convert Sun=0 to Sun=6, Mon=1 to Mon=0 for standard Vietnamese calendar (T2-CN)
+  let firstDayOffset = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+  
+  // Total days in current month
+  const totalDays = new Date(year, month + 1, 0).getDate();
+  
+  // Total days in previous month
+  const prevMonthTotalDays = new Date(year, month, 0).getDate();
+  
+  // Fill previous month days
+  for (let i = firstDayOffset - 1; i >= 0; i--) {
+    const prevDay = prevMonthTotalDays - i;
+    const prevMonthDate = new Date(year, month - 1, prevDay);
+    createDayCell(prevMonthDate, true);
+  }
+  
+  // Fill current month days
+  for (let i = 1; i <= totalDays; i++) {
+    const currDate = new Date(year, month, i);
+    createDayCell(currDate, false);
+  }
+  
+  // Fill next month days to complete a grid of 42 cells (6 rows)
+  const cellsRendered = firstDayOffset + totalDays;
+  const cellsRemaining = 42 - cellsRendered;
+  for (let i = 1; i <= cellsRemaining; i++) {
+    const nextMonthDate = new Date(year, month + 1, i);
+    createDayCell(nextMonthDate, true);
+  }
+}
+
+function createDayCell(date, isOtherMonth) {
+  const daysGrid = document.getElementById('calendar-days-grid');
+  const cell = document.createElement('div');
+  cell.className = 'calendar-day';
+  if (isOtherMonth) {
+    cell.classList.add('other-month');
+  }
+  
+  const dateStr = formatDateISO(date);
+  
+  // Check if active (selected)
+  if (dateStr === formatDateISO(calendarSelectedDate)) {
+    cell.classList.add('active');
+  }
+  
+  // Check if today
+  const todayStr = formatDateISO(new Date());
+  if (dateStr === todayStr) {
+    cell.classList.add('today');
+  }
+  
+  // Number label
+  const numDiv = document.createElement('div');
+  numDiv.className = 'day-num';
+  numDiv.innerText = date.getDate();
+  cell.appendChild(numDiv);
+  
+  // Dots container
+  const dotsDiv = document.createElement('div');
+  dotsDiv.className = 'day-dots';
+  
+  // Check for events
+  const hasEvents = state.timetableEvents.some(e => e.date === dateStr);
+  if (hasEvents) {
+    const dot = document.createElement('span');
+    dot.className = 'dot-event';
+    dotsDiv.appendChild(dot);
+  }
+  
+  // Check for transactions
+  const dayTransactions = state.timetableTransactions.filter(t => t.date === dateStr);
+  if (dayTransactions.length > 0) {
+    const hasIncome = dayTransactions.some(t => t.type === 'income');
+    const hasExpense = dayTransactions.some(t => t.type === 'expense');
+    
+    if (hasIncome) {
+      const dotIn = document.createElement('span');
+      dotIn.className = 'dot-finance-in';
+      dotsDiv.appendChild(dotIn);
+    }
+    if (hasExpense) {
+      const dotOut = document.createElement('span');
+      dotOut.className = 'dot-finance-out';
+      dotsDiv.appendChild(dotOut);
+    }
+  }
+  
+  cell.appendChild(dotsDiv);
+  
+  cell.addEventListener('click', () => {
+    selectDate(date);
+  });
+  
+  daysGrid.appendChild(cell);
+}
+
+function selectDate(date) {
+  calendarSelectedDate = date;
+  
+  renderCalendar();
+  
+  const weekdayNames = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+  const dayLabel = document.getElementById('timetable-selected-day-label');
+  const dayWeekday = document.getElementById('timetable-selected-day-weekday');
+  
+  dayLabel.innerText = `Ngày ${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+  dayWeekday.innerText = weekdayNames[date.getDay()];
+  
+  renderDayDetails();
+}
+
+function formatDateISO(date) {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function renderDayDetails() {
+  const dateStr = formatDateISO(calendarSelectedDate);
+  
+  // 1. Events list
+  const eventsList = document.getElementById('timetable-day-events-list');
+  eventsList.innerHTML = '';
+  
+  const dayEvents = state.timetableEvents.filter(e => e.date === dateStr);
+  
+  if (dayEvents.length === 0) {
+    eventsList.innerHTML = '<p class="empty-msg" style="padding:10px 0;">Không có lịch biểu cho ngày này.</p>';
+  } else {
+    dayEvents.forEach(event => {
+      const div = document.createElement('div');
+      div.className = `day-event-item ${event.completed ? 'completed' : ''}`;
+      
+      let goalTag = '';
+      if (event.goalId) {
+        const goal = state.timetableGoals.find(g => g.id === event.goalId);
+        if (goal) {
+          goalTag = `<span class="goal-tag">${goal.title}</span>`;
+        }
+      }
+      
+      div.innerHTML = `
+        <input type="checkbox" ${event.completed ? 'checked' : ''}>
+        <div class="event-details">
+          <span class="event-title">${event.title}</span>
+          ${event.time ? `<span class="time-badge">${event.time}</span>` : ''}
+          ${goalTag}
+        </div>
+        <div class="day-event-actions">
+          <button type="button" class="btn-icon-only edit-btn" title="Sửa">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          </button>
+          <button type="button" class="btn-icon-only delete delete-btn" title="Xóa">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        </div>
+      `;
+      
+      div.querySelector('input[type="checkbox"]').addEventListener('change', async (e) => {
+        event.completed = e.target.checked;
+        if (event.completed) {
+          div.classList.add('completed');
+        } else {
+          div.classList.remove('completed');
+        }
+        await saveData();
+        if (event.goalId) {
+          renderTimetableGoals();
+        }
+        const activeSubBtn = document.querySelector('.sub-nav-btn.active');
+        if (activeSubBtn && activeSubBtn.getAttribute('data-subtab') === 'incomplete') {
+          renderIncompleteTasks();
+        }
+      });
+      
+      div.querySelector('.edit-btn').addEventListener('click', () => {
+        openEditEventModal(event);
+      });
+      
+      div.querySelector('.delete-btn').addEventListener('click', async () => {
+        if (confirm(`Bạn có chắc chắn muốn xóa lịch biểu "${event.title}"?`)) {
+          state.timetableEvents = state.timetableEvents.filter(e => e.id !== event.id);
+          await saveData();
+          renderCalendar();
+          renderDayDetails();
+          const activeSubBtn = document.querySelector('.sub-nav-btn.active');
+          if (activeSubBtn) {
+            renderActiveSubTab(activeSubBtn.getAttribute('data-subtab'));
+          }
+        }
+      });
+      
+      eventsList.appendChild(div);
+    });
+  }
+  
+  // 2. Finance list
+  const financeList = document.getElementById('timetable-day-finance-list');
+  financeList.innerHTML = '';
+  
+  const dayFinance = state.timetableTransactions.filter(t => t.date === dateStr);
+  
+  if (dayFinance.length === 0) {
+    financeList.innerHTML = '<p class="empty-msg" style="padding:10px 0;">Không có thu chi nào cho ngày này.</p>';
+  } else {
+    dayFinance.forEach(trans => {
+      const div = document.createElement('div');
+      div.className = 'day-finance-item';
+      
+      const typeLabel = trans.type === 'income' ? 'Thu' : 'Chi';
+      const amountPrefix = trans.type === 'income' ? '+' : '-';
+      
+      div.innerHTML = `
+        <div class="finance-info">
+          <span class="finance-title">${trans.title}</span>
+          <span class="finance-type-badge ${trans.type}">${typeLabel}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="finance-amount ${trans.type}">${amountPrefix}${formatMoney(trans.amount)}</span>
+          <button type="button" class="btn-icon-only delete delete-btn" title="Xóa">
+            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        </div>
+      `;
+      
+      div.querySelector('.delete-btn').addEventListener('click', async () => {
+        if (confirm(`Bạn có chắc chắn muốn xóa thu chi "${trans.title}"?`)) {
+          state.timetableTransactions = state.timetableTransactions.filter(t => t.id !== trans.id);
+          await saveData();
+          renderCalendar();
+          renderDayDetails();
+          const activeSubBtn = document.querySelector('.sub-nav-btn.active');
+          if (activeSubBtn) {
+            renderActiveSubTab(activeSubBtn.getAttribute('data-subtab'));
+          }
+        }
+      });
+      
+      financeList.appendChild(div);
+    });
+  }
+}
+
+function renderTimetableGoals() {
+  const container = document.getElementById('timetable-goals-list');
+  container.innerHTML = '';
+  
+  if (state.timetableGoals.length === 0) {
+    container.innerHTML = '<p class="empty-msg" style="grid-column: 1 / -1; padding: 20px 0;">Chưa có mục tiêu nào. Hãy thêm mục tiêu mới!</p>';
+    return;
+  }
+  
+  state.timetableGoals.forEach(goal => {
+    const card = document.createElement('div');
+    card.className = 'goal-item-card';
+    
+    const totalLinkedCompleted = state.timetableEvents.filter(e => e.goalId === goal.id && e.completed).length;
+    const manualProgress = goal.manualProgress || 0;
+    const totalProgress = totalLinkedCompleted + manualProgress;
+    const target = goal.targetCount || 10;
+    const progressPercent = Math.min(100, Math.round((totalProgress / target) * 100));
+    
+    card.innerHTML = `
+      <div class="goal-item-header">
+        <h5>${goal.title}</h5>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn-icon-only edit-btn" title="Sửa" style="color: var(--text-secondary); cursor: pointer; background: none; border: none;">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          </button>
+          <button type="button" class="btn-icon-only delete delete-btn" title="Xóa">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        </div>
+      </div>
+      <div class="goal-item-progress-row" style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+        <span style="display: inline-flex; align-items: center; gap: 6px;">
+          Tiến độ: ${totalProgress} / ${target}
+          ${manualProgress > 0 ? `<small style="opacity: 0.6; font-size: 10px;">(Thủ công +${manualProgress})</small>` : ''}
+        </span>
+        <div style="display: inline-flex; align-items: center; gap: 4px; margin-left: auto;">
+          <button type="button" class="btn-manual-dec" title="Giảm tiến độ" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-secondary); width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold; font-size: 12px; transition: all 0.15s;">-</button>
+          <button type="button" class="btn-manual-inc" title="Tăng tiến độ" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border-color); border-radius: 4px; color: var(--accent-primary); width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold; font-size: 12px; transition: all 0.15s;">+</button>
+        </div>
+        <strong>${progressPercent}%</strong>
+      </div>
+      <div class="progress-track" style="width: 100%; height: 8px; margin-top: 8px;">
+        <div class="progress-fill" style="width: ${progressPercent}%"></div>
+      </div>
+    `;
+    
+    card.querySelector('.btn-manual-inc').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      goal.manualProgress = (goal.manualProgress || 0) + 1;
+      await saveData();
+      renderTimetableGoals();
+    });
+    
+    card.querySelector('.btn-manual-dec').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if ((goal.manualProgress || 0) > 0) {
+        goal.manualProgress = (goal.manualProgress || 0) - 1;
+        await saveData();
+        renderTimetableGoals();
+      }
+    });
+    
+    card.querySelector('.edit-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openEditGoalModal(goal);
+    });
+    
+    card.querySelector('.delete-btn').addEventListener('click', async () => {
+      if (confirm(`Bạn có chắc chắn muốn xóa mục tiêu "${goal.title}"? Các lịch dạy liên kết sẽ không còn thuộc mục tiêu này nữa.`)) {
+        state.timetableEvents.forEach(e => {
+          if (e.goalId === goal.id) {
+            e.goalId = '';
+          }
+        });
+        state.defaultScheduleEvents.forEach(e => {
+          if (e.goalId === goal.id) {
+            e.goalId = '';
+          }
+        });
+        
+        state.timetableGoals = state.timetableGoals.filter(g => g.id !== goal.id);
+        await saveData();
+        renderTimetableGoals();
+        renderDayDetails();
+      }
+    });
+    
+    container.appendChild(card);
+  });
+}
+
+function renderFuturePlans() {
+  renderPlanColumn('10days');
+  renderPlanColumn('1year');
+  renderPlanColumn('10years');
+}
+
+function renderPlanColumn(type) {
+  const listId = `list-plan-${type}`;
+  const listContainer = document.getElementById(listId);
+  listContainer.innerHTML = '';
+  
+  let items = [];
+  if (type === '10days') items = state.futurePlans.days10;
+  else if (type === '1year') items = state.futurePlans.year1;
+  else if (type === '10years') items = state.futurePlans.years10;
+  
+  if (!items || items.length === 0) {
+    listContainer.innerHTML = '<p class="empty-msg" style="padding:10px 0; font-size:12px;">Chưa có kế hoạch nào.</p>';
+    return;
+  }
+  
+  items.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = `plan-item ${item.completed ? 'completed' : ''}`;
+    
+    div.innerHTML = `
+      <input type="checkbox" ${item.completed ? 'checked' : ''}>
+      <span>${item.text}</span>
+      <button class="plan-item-delete">&times;</button>
+    `;
+    
+    div.querySelector('input').addEventListener('change', async (e) => {
+      item.completed = e.target.checked;
+      if (item.completed) {
+        div.classList.add('completed');
+      } else {
+        div.classList.remove('completed');
+      }
+      await saveData();
+    });
+    
+    div.querySelector('.plan-item-delete').addEventListener('click', async () => {
+      if (type === '10days') state.futurePlans.days10.splice(idx, 1);
+      else if (type === '1year') state.futurePlans.year1.splice(idx, 1);
+      else if (type === '10years') state.futurePlans.years10.splice(idx, 1);
+      await saveData();
+      renderPlanColumn(type);
+    });
+    
+    listContainer.appendChild(div);
+  });
+}
+
+function setupFuturePlansEvents() {
+  const addPlan = async (type) => {
+    const input = document.getElementById(`input-plan-${type}`);
+    const text = input.value.trim();
+    if (!text) return;
+    
+    const newItem = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      text: text,
+      completed: false
+    };
+    
+    if (type === '10days') state.futurePlans.days10.push(newItem);
+    else if (type === '1year') state.futurePlans.year1.push(newItem);
+    else if (type === '10years') state.futurePlans.years10.push(newItem);
+    
+    input.value = '';
+    await saveData();
+    renderPlanColumn(type);
+  };
+  
+  document.getElementById('btn-add-plan-10days').addEventListener('click', () => addPlan('10days'));
+  document.getElementById('input-plan-10days').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') addPlan('10days');
+  });
+  
+  document.getElementById('btn-add-plan-1year').addEventListener('click', () => addPlan('1year'));
+  document.getElementById('input-plan-1year').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') addPlan('1year');
+  });
+  
+  document.getElementById('btn-add-plan-10years').addEventListener('click', () => addPlan('10years'));
+  document.getElementById('input-plan-10years').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') addPlan('10years');
+  });
+}
+
+function renderFinanceSubPane() {
+  const year = calendarSelectedDate.getFullYear();
+  const month = calendarSelectedDate.getMonth();
+  
+  const monthTransactions = state.timetableTransactions.filter(t => {
+    const tDate = new Date(t.date);
+    return tDate.getFullYear() === year && tDate.getMonth() === month;
+  });
+  
+  monthTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+  
+  let totalIncome = 0;
+  let totalExpense = 0;
+  
+  monthTransactions.forEach(t => {
+    if (t.type === 'income') totalIncome += t.amount;
+    else totalExpense += t.amount;
+  });
+  
+  const netBalance = totalIncome - totalExpense;
+  
+  document.getElementById('finance-month-income-total').innerText = formatMoney(totalIncome);
+  document.getElementById('finance-month-expense-total').innerText = formatMoney(totalExpense);
+  document.getElementById('finance-month-net-total').innerText = (netBalance >= 0 ? '+' : '') + formatMoney(netBalance);
+  
+  const tbody = document.querySelector('#finance-transactions-table tbody');
+  tbody.innerHTML = '';
+  
+  if (monthTransactions.length === 0) {
+    const row = tbody.insertRow();
+    const cell = row.insertCell(0);
+    cell.colSpan = 5;
+    cell.className = 'empty-msg';
+    cell.innerText = 'Không có giao dịch nào trong tháng này.';
+    return;
+  }
+  
+  monthTransactions.forEach(t => {
+    const row = tbody.insertRow();
+    
+    const d = new Date(t.date);
+    const dateFormatted = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+    row.insertCell(0).innerText = dateFormatted;
+    row.insertCell(1).innerText = t.title;
+    
+    const typeLabel = t.type === 'income' ? 'Thu' : 'Chi';
+    const typeBadgeClass = t.type === 'income' ? 'badge success' : 'badge danger';
+    row.insertCell(2).innerHTML = `<span class="${typeBadgeClass}">${typeLabel}</span>`;
+    
+    const amountVal = (t.type === 'income' ? '+' : '-') + formatMoney(t.amount);
+    const amountCell = row.insertCell(3);
+    amountCell.innerText = amountVal;
+    amountCell.style.fontWeight = '600';
+    if (t.type === 'income') amountCell.style.color = 'var(--accent-primary)';
+    else amountCell.style.color = 'var(--accent-red)';
+    
+    const actionsCell = row.insertCell(4);
+    actionsCell.style.textAlign = 'center';
+    actionsCell.innerHTML = `
+      <button type="button" class="btn-icon-only delete delete-btn" title="Xóa" style="padding: 2px;">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+      </button>
+    `;
+    
+    actionsCell.querySelector('.delete-btn').addEventListener('click', async () => {
+      if (confirm(`Bạn có chắc chắn muốn xóa giao dịch "${t.title}"?`)) {
+        state.timetableTransactions = state.timetableTransactions.filter(item => item.id !== t.id);
+        await saveData();
+        renderCalendar();
+        renderDayDetails();
+        renderFinanceSubPane();
+      }
+    });
+  });
+}
+
+function renderIncompleteTasks() {
+  const container = document.getElementById('timetable-incomplete-list');
+  container.innerHTML = '';
+  
+  const incompleteEvents = state.timetableEvents.filter(e => !e.completed);
+  incompleteEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+  
+  if (incompleteEvents.length === 0) {
+    container.innerHTML = '<p class="empty-msg" style="padding: 20px 0;">Chúc mừng! Bạn không có đầu việc nào chưa hoàn thành.</p>';
+    return;
+  }
+  
+  incompleteEvents.forEach(event => {
+    const card = document.createElement('div');
+    card.className = 'incomplete-item-card';
+    
+    const d = new Date(event.date);
+    const dateFormatted = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+    
+    let goalTag = '';
+    if (event.goalId) {
+      const goal = state.timetableGoals.find(g => g.id === event.goalId);
+      if (goal) {
+        goalTag = `<span class="goal-tag">${goal.title}</span>`;
+      }
+    }
+    
+    card.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+        <input type="checkbox" style="width: 16px; height: 16px; accent-color: var(--accent-primary); cursor: pointer;">
+        <div class="incomplete-item-info">
+          <strong>${event.title}</strong>
+          <span style="font-size:12px; color:var(--text-muted);">${dateFormatted} ${event.time ? `&bull; ${event.time}` : ''}</span>
+          ${goalTag}
+        </div>
+      </div>
+      <button type="button" class="btn-icon-only delete delete-btn" title="Xóa">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+      </button>
+    `;
+    
+    card.querySelector('input').addEventListener('change', async (e) => {
+      event.completed = e.target.checked;
+      await saveData();
+      showToast("Đã hoàn thành công việc!", "success");
+      
+      setTimeout(() => {
+        renderIncompleteTasks();
+        renderCalendar();
+        renderDayDetails();
+        renderTimetableGoals();
+      }, 300);
+    });
+    
+    card.querySelector('.delete-btn').addEventListener('click', async () => {
+      if (confirm(`Bạn có chắc chắn muốn xóa công việc "${event.title}"?`)) {
+        state.timetableEvents = state.timetableEvents.filter(e => e.id !== event.id);
+        await saveData();
+        renderIncompleteTasks();
+        renderCalendar();
+        renderDayDetails();
+      }
+    });
+    
+    container.appendChild(card);
+  });
+}
+
+function renderDefaultSlots() {
+  const container = document.getElementById('timetable-default-slots-list');
+  container.innerHTML = '';
+  
+  if (state.defaultScheduleEvents.length === 0) {
+    container.innerHTML = '<p class="empty-msg" style="grid-column: 1 / -1; padding: 20px 0;">Chưa cài đặt thời khóa biểu mặc định. Hãy bấm "Thêm lịch mặc định"!</p>';
+    return;
+  }
+  
+  const daysLabel = {
+    '1': 'Thứ 2',
+    '2': 'Thứ 3',
+    '3': 'Thứ 4',
+    '4': 'Thứ 5',
+    '5': 'Thứ 6',
+    '6': 'Thứ 7',
+    '0': 'Chủ Nhật',
+    'all': 'Tất cả các ngày'
+  };
+  
+  const sortedSlots = [...state.defaultScheduleEvents].sort((a, b) => {
+    if (a.dayOfWeek !== b.dayOfWeek) {
+      const getDayVal = (day) => {
+        if (day === 'all') return 8;
+        if (day === '0') return 7;
+        return parseInt(day);
+      };
+      return getDayVal(a.dayOfWeek) - getDayVal(b.dayOfWeek);
+    }
+    return a.time.localeCompare(b.time);
+  });
+  
+  sortedSlots.forEach(slot => {
+    const card = document.createElement('div');
+    card.className = 'default-slot-card';
+    
+    let goalTag = '';
+    if (slot.goalId) {
+      const goal = state.timetableGoals.find(g => g.id === slot.goalId);
+      if (goal) {
+        goalTag = `<span class="goal-tag" style="margin-top:0;">${goal.title}</span>`;
+      }
+    }
+    
+    card.innerHTML = `
+      <div class="default-slot-info">
+        <strong>${slot.title}</strong>
+        <span class="day-time">${daysLabel[slot.dayOfWeek]} &bull; ${slot.time}</span>
+        ${goalTag}
+      </div>
+      <button type="button" class="btn-icon-only delete delete-btn" title="Xóa">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+      </button>
+    `;
+    
+    card.querySelector('.delete-btn').addEventListener('click', async () => {
+      if (confirm(`Bạn có chắc chắn muốn xóa lịch mặc định "${slot.title}"?`)) {
+        state.defaultScheduleEvents = state.defaultScheduleEvents.filter(item => item.id !== slot.id);
+        await saveData();
+        renderDefaultSlots();
+      }
+    });
+    
+    container.appendChild(card);
+  });
+}
+
+async function applyDefaultScheduleToWeek() {
+  if (state.defaultScheduleEvents.length === 0) {
+    showToast("Bạn chưa cấu hình thời khóa biểu mặc định hàng tuần. Hãy cài đặt trong tab 'Lịch biểu mặc định'!", "warning");
+    return;
+  }
+  
+  const date = new Date(calendarSelectedDate);
+  const dayIndex = date.getDay();
+  const distanceToMon = dayIndex === 0 ? -6 : 1 - dayIndex;
+  
+  const monday = new Date(date);
+  monday.setDate(date.getDate() + distanceToMon);
+  
+  let insertedCount = 0;
+  
+  for (let i = 0; i < 7; i++) {
+    const currentDay = new Date(monday);
+    currentDay.setDate(monday.getDate() + i);
+    const dateStr = formatDateISO(currentDay);
+    
+    const currentDayOfWeekVal = i === 6 ? '0' : (i + 1).toString();
+    const daySlots = state.defaultScheduleEvents.filter(s => s.dayOfWeek === currentDayOfWeekVal || s.dayOfWeek === 'all');
+    
+    daySlots.forEach(slot => {
+      const exists = state.timetableEvents.some(e => e.date === dateStr && e.title === slot.title && e.time === slot.time);
+      
+      if (!exists) {
+        state.timetableEvents.push({
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+          title: slot.title,
+          date: dateStr,
+          time: slot.time,
+          completed: false,
+          goalId: slot.goalId || ''
+        });
+        insertedCount++;
+      }
+    });
+  }
+  
+  if (insertedCount > 0) {
+    await saveData();
+    renderCalendar();
+    renderDayDetails();
+    const activeSubBtn = document.querySelector('.sub-nav-btn.active');
+    if (activeSubBtn && activeSubBtn.getAttribute('data-subtab') === 'incomplete') {
+      renderIncompleteTasks();
+    }
+    showToast(`Đã tự động chèn thành công ${insertedCount} lịch dạy mặc định vào tuần này!`, "success");
+  } else {
+    showToast("Các lịch dạy mặc định cho tuần này đã có sẵn trên lịch của bạn.", "info");
+  }
+}
+
+async function applyDefaultScheduleToDay() {
+  if (state.defaultScheduleEvents.length === 0) {
+    showToast("Bạn chưa cấu hình thời khóa biểu mặc định hàng tuần. Hãy cài đặt trong tab 'Lịch biểu mặc định'!", "warning");
+    return;
+  }
+  
+  const dateStr = formatDateISO(calendarSelectedDate);
+  const currentDayOfWeekVal = calendarSelectedDate.getDay().toString();
+  
+  const daySlots = state.defaultScheduleEvents.filter(s => s.dayOfWeek === currentDayOfWeekVal || s.dayOfWeek === 'all');
+  
+  if (daySlots.length === 0) {
+    showToast("Không có lịch dạy mặc định nào cho ngày này.", "info");
+    return;
+  }
+  
+  let insertedCount = 0;
+  daySlots.forEach(slot => {
+    const exists = state.timetableEvents.some(e => e.date === dateStr && e.title === slot.title && e.time === slot.time);
+    
+    if (!exists) {
+      state.timetableEvents.push({
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+        title: slot.title,
+        date: dateStr,
+        time: slot.time,
+        completed: false,
+        goalId: slot.goalId || ''
+      });
+      insertedCount++;
+    }
+  });
+  
+  if (insertedCount > 0) {
+    await saveData();
+    renderCalendar();
+    renderDayDetails();
+    const activeSubBtn = document.querySelector('.sub-nav-btn.active');
+    if (activeSubBtn && activeSubBtn.getAttribute('data-subtab') === 'incomplete') {
+      renderIncompleteTasks();
+    }
+    const dStr = `${calendarSelectedDate.getDate().toString().padStart(2, '0')}/${(calendarSelectedDate.getMonth()+1).toString().padStart(2, '0')}/${calendarSelectedDate.getFullYear()}`;
+    showToast(`Đã tự động chèn thành công ${insertedCount} lịch dạy mặc định vào ngày ${dStr}!`, "success");
+  } else {
+    showToast("Các lịch dạy mặc định cho ngày này đã có sẵn trên lịch của bạn.", "info");
+  }
+}
+
+function openApplyDefaultScheduleModal() {
+  if (state.defaultScheduleEvents.length === 0) {
+    showToast("Bạn chưa cấu hình thời khóa biểu mặc định hàng tuần. Hãy cài đặt trong tab 'Lịch biểu mặc định'!", "warning");
+    return;
+  }
+  
+  const weekdayNames = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+  const dayName = weekdayNames[calendarSelectedDate.getDay()];
+  const dateFormatted = `${calendarSelectedDate.getDate().toString().padStart(2, '0')}/${(calendarSelectedDate.getMonth() + 1).toString().padStart(2, '0')}/${calendarSelectedDate.getFullYear()}`;
+  
+  document.getElementById('apply-default-day-name').innerText = `${dayName}, ngày ${dateFormatted}`;
+  document.getElementById('apply-default-schedule-modal').style.display = 'flex';
+}
+
+function closeApplyDefaultScheduleModal() {
+  document.getElementById('apply-default-schedule-modal').style.display = 'none';
+}
+
+async function applyDefaultScheduleToMonth() {
+  if (state.defaultScheduleEvents.length === 0) {
+    showToast("Bạn chưa cấu hình thời khóa biểu mặc định hàng tuần. Hãy cài đặt trong tab 'Lịch biểu mặc định'!", "warning");
+    return;
+  }
+  
+  const year = calendarSelectedDate.getFullYear();
+  const month = calendarSelectedDate.getMonth();
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  
+  let insertedCount = 0;
+  
+  for (let d = 1; d <= lastDay; d++) {
+    const currentDay = new Date(year, month, d);
+    const dateStr = formatDateISO(currentDay);
+    const currentDayOfWeekVal = currentDay.getDay().toString();
+    
+    const daySlots = state.defaultScheduleEvents.filter(s => s.dayOfWeek === currentDayOfWeekVal || s.dayOfWeek === 'all');
+    
+    daySlots.forEach(slot => {
+      const exists = state.timetableEvents.some(e => e.date === dateStr && e.title === slot.title && e.time === slot.time);
+      
+      if (!exists) {
+        state.timetableEvents.push({
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+          title: slot.title,
+          date: dateStr,
+          time: slot.time,
+          completed: false,
+          goalId: slot.goalId || ''
+        });
+        insertedCount++;
+      }
+    });
+  }
+  
+  if (insertedCount > 0) {
+    await saveData();
+    renderCalendar();
+    renderDayDetails();
+    const activeSubBtn = document.querySelector('.sub-nav-btn.active');
+    if (activeSubBtn && activeSubBtn.getAttribute('data-subtab') === 'incomplete') {
+      renderIncompleteTasks();
+    }
+    showToast(`Đã tự động chèn thành công ${insertedCount} lịch dạy mặc định vào cả tháng ${month + 1}/${year}!`, "success");
+  } else {
+    showToast("Các lịch dạy mặc định cho tháng này đã có sẵn trên lịch của bạn.", "info");
+  }
+}
+
+function openAddGoalModal() {
+  document.getElementById('timetable-goal-modal-title').innerText = "Thêm mục tiêu mới";
+  document.getElementById('timetable-goal-id').value = '';
+  document.getElementById('timetable-goal-title').value = '';
+  document.getElementById('timetable-goal-target').value = '10';
+  document.getElementById('timetable-goal-modal').style.display = 'flex';
+}
+
+function openEditGoalModal(goal) {
+  document.getElementById('timetable-goal-modal-title').innerText = "Sửa mục tiêu";
+  document.getElementById('timetable-goal-id').value = goal.id;
+  document.getElementById('timetable-goal-title').value = goal.title;
+  document.getElementById('timetable-goal-target').value = goal.targetCount || 10;
+  document.getElementById('timetable-goal-modal').style.display = 'flex';
+}
+
+function closeGoalModal() {
+  document.getElementById('timetable-goal-modal').style.display = 'none';
+}
+
+async function saveGoalForm(e) {
+  e.preventDefault();
+  const id = document.getElementById('timetable-goal-id').value;
+  const title = document.getElementById('timetable-goal-title').value.trim();
+  const targetCount = parseInt(document.getElementById('timetable-goal-target').value) || 10;
+  
+  if (!title) {
+    showToast("Vui lòng nhập tiêu đề mục tiêu!", "warning");
+    return;
+  }
+  
+  if (id) {
+    const idx = state.timetableGoals.findIndex(g => g.id === id);
+    if (idx !== -1) {
+      state.timetableGoals[idx].title = title;
+      state.timetableGoals[idx].targetCount = targetCount;
+    }
+  } else {
+    state.timetableGoals.push({
+      id: Date.now().toString(),
+      title,
+      targetCount
+    });
+  }
+  
+  await saveData();
+  closeGoalModal();
+  renderTimetableGoals();
+  renderDayDetails();
+  renderCalendar();
+  showToast("Đã lưu mục tiêu thành công!", "success");
+}
+
+function openAddTransactionModal() {
+  document.getElementById('timetable-transaction-modal-title').innerText = "Thêm giao dịch thu chi";
+  document.getElementById('timetable-transaction-id').value = '';
+  document.getElementById('timetable-transaction-title').value = '';
+  document.getElementById('timetable-transaction-date').value = formatDateISO(calendarSelectedDate);
+  document.getElementById('timetable-transaction-type').value = 'income';
+  document.getElementById('timetable-transaction-amount').value = '';
+  document.getElementById('timetable-transaction-modal').style.display = 'flex';
+}
+
+function closeTransactionModal() {
+  document.getElementById('timetable-transaction-modal').style.display = 'none';
+}
+
+async function saveTransactionForm(e) {
+  e.preventDefault();
+  const id = document.getElementById('timetable-transaction-id').value;
+  const title = document.getElementById('timetable-transaction-title').value.trim();
+  const date = document.getElementById('timetable-transaction-date').value;
+  const type = document.getElementById('timetable-transaction-type').value;
+  const amount = parseInt(document.getElementById('timetable-transaction-amount').value) || 0;
+  
+  if (!title || !date || amount <= 0) {
+    showToast("Vui lòng nhập đầy đủ thông tin giao dịch hợp lệ!", "warning");
+    return;
+  }
+  
+  if (id) {
+    const idx = state.timetableTransactions.findIndex(t => t.id === id);
+    if (idx !== -1) {
+      state.timetableTransactions[idx] = { ...state.timetableTransactions[idx], title, date, type, amount };
+    }
+  } else {
+    state.timetableTransactions.push({
+      id: Date.now().toString(),
+      title,
+      date,
+      type,
+      amount
+    });
+  }
+  
+  await saveData();
+  closeTransactionModal();
+  renderCalendar();
+  renderDayDetails();
+  
+  const activeSubBtn = document.querySelector('.sub-nav-btn.active');
+  if (activeSubBtn && activeSubBtn.getAttribute('data-subtab') === 'finance') {
+    renderFinanceSubPane();
+  }
+  
+  showToast("Đã lưu thu chi thành công!", "success");
+}
+
+function openAddDefaultSlotModal() {
+  document.getElementById('timetable-default-slot-modal-title').innerText = "Thêm lịch mặc định hàng tuần";
+  document.getElementById('timetable-default-slot-id').value = '';
+  document.getElementById('timetable-default-slot-title').value = '';
+  document.getElementById('timetable-default-slot-day').value = '1';
+  document.getElementById('timetable-default-slot-time').value = '08:00';
+  
+  const goalSelect = document.getElementById('timetable-default-slot-goal');
+  goalSelect.innerHTML = '<option value="">-- Chọn mục tiêu --</option>';
+  state.timetableGoals.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g.id;
+    opt.innerText = g.title;
+    goalSelect.appendChild(opt);
+  });
+  
+  document.getElementById('timetable-default-slot-modal').style.display = 'flex';
+}
+
+function closeDefaultSlotModal() {
+  document.getElementById('timetable-default-slot-modal').style.display = 'none';
+}
+
+async function saveDefaultSlotForm(e) {
+  e.preventDefault();
+  const id = document.getElementById('timetable-default-slot-id').value;
+  const title = document.getElementById('timetable-default-slot-title').value.trim();
+  const dayOfWeek = document.getElementById('timetable-default-slot-day').value;
+  const time = document.getElementById('timetable-default-slot-time').value;
+  const goalId = document.getElementById('timetable-default-slot-goal').value;
+  
+  if (!title || !time) {
+    showToast("Vui lòng nhập tên lịch biểu và thời gian!", "warning");
+    return;
+  }
+  
+  if (id) {
+    const idx = state.defaultScheduleEvents.findIndex(s => s.id === id);
+    if (idx !== -1) {
+      state.defaultScheduleEvents[idx] = { ...state.defaultScheduleEvents[idx], title, dayOfWeek, time, goalId };
+    }
+  } else {
+    state.defaultScheduleEvents.push({
+      id: Date.now().toString(),
+      title,
+      dayOfWeek,
+      time,
+      goalId
+    });
+  }
+  
+  await saveData();
+  closeDefaultSlotModal();
+  renderDefaultSlots();
+  showToast("Đã lưu lịch mặc định!", "success");
+}
+
+function openAddEventModal() {
+  document.getElementById('timetable-event-modal-title').innerText = "Thêm lịch biểu mới";
+  document.getElementById('timetable-event-id').value = '';
+  document.getElementById('timetable-event-title').value = '';
+  document.getElementById('timetable-event-date').value = formatDateISO(calendarSelectedDate);
+  document.getElementById('timetable-event-time').value = '08:00';
+  
+  const goalSelect = document.getElementById('timetable-event-goal');
+  goalSelect.innerHTML = '<option value="">-- Chọn mục tiêu để theo dõi tiến độ --</option>';
+  state.timetableGoals.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g.id;
+    opt.innerText = g.title;
+    goalSelect.appendChild(opt);
+  });
+  
+  document.getElementById('timetable-event-modal').style.display = 'flex';
+}
+
+function openEditEventModal(event) {
+  document.getElementById('timetable-event-modal-title').innerText = "Chỉnh sửa lịch biểu";
+  document.getElementById('timetable-event-id').value = event.id;
+  document.getElementById('timetable-event-title').value = event.title;
+  document.getElementById('timetable-event-date').value = event.date;
+  document.getElementById('timetable-event-time').value = event.time || '08:00';
+  
+  const goalSelect = document.getElementById('timetable-event-goal');
+  goalSelect.innerHTML = '<option value="">-- Chọn mục tiêu để theo dõi tiến độ --</option>';
+  state.timetableGoals.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g.id;
+    opt.innerText = g.title;
+    if (g.id === event.goalId) {
+      opt.selected = true;
+    }
+    goalSelect.appendChild(opt);
+  });
+  
+  document.getElementById('timetable-event-modal').style.display = 'flex';
+}
+
+function closeEventModal() {
+  document.getElementById('timetable-event-modal').style.display = 'none';
+}
+
+async function saveEventForm(e) {
+  e.preventDefault();
+  const id = document.getElementById('timetable-event-id').value;
+  const title = document.getElementById('timetable-event-title').value.trim();
+  const date = document.getElementById('timetable-event-date').value;
+  const time = document.getElementById('timetable-event-time').value;
+  const goalId = document.getElementById('timetable-event-goal').value;
+  
+  if (!title || !date) {
+    showToast("Vui lòng điền tiêu đề và ngày thực hiện!", "warning");
+    return;
+  }
+  
+  if (id) {
+    const idx = state.timetableEvents.findIndex(item => item.id === id);
+    if (idx !== -1) {
+      const prevGoalId = state.timetableEvents[idx].goalId;
+      state.timetableEvents[idx] = {
+        ...state.timetableEvents[idx],
+        title,
+        date,
+        time,
+        goalId
+      };
+      if (prevGoalId !== goalId) {
+        renderTimetableGoals();
+      }
+    }
+  } else {
+    state.timetableEvents.push({
+      id: Date.now().toString(),
+      title,
+      date,
+      time,
+      completed: false,
+      goalId
+    });
+  }
+  
+  await saveData();
+  closeEventModal();
+  renderCalendar();
+  
+  if (date === formatDateISO(calendarSelectedDate)) {
+    renderDayDetails();
+  }
+  
+  const activeSubBtn = document.querySelector('.sub-nav-btn.active');
+  if (activeSubBtn) {
+    renderActiveSubTab(activeSubBtn.getAttribute('data-subtab'));
+  }
+  
+  showToast("Đã lưu lịch biểu thành công!", "success");
+}
+
+function setupTimetableEvents() {
+  document.getElementById('calendar-btn-prev').addEventListener('click', () => {
+    calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() - 1);
+    renderCalendar();
+  });
+  
+  document.getElementById('calendar-btn-next').addEventListener('click', () => {
+    calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() + 1);
+    renderCalendar();
+  });
+  
+  setupTimetableSubTabs();
+  setupFuturePlansEvents();
+  
+  document.getElementById('btn-open-add-event-modal').addEventListener('click', openAddEventModal);
+  document.getElementById('btn-open-add-goal-modal').addEventListener('click', openAddGoalModal);
+  document.getElementById('btn-open-add-transaction-modal').addEventListener('click', openAddTransactionModal);
+  document.getElementById('btn-open-add-default-slot-modal').addEventListener('click', openAddDefaultSlotModal);
+  document.getElementById('btn-apply-default-schedule').addEventListener('click', openApplyDefaultScheduleModal);
+  
+  document.getElementById('btn-apply-default-day').addEventListener('click', async () => {
+    closeApplyDefaultScheduleModal();
+    await applyDefaultScheduleToDay();
+  });
+  document.getElementById('btn-apply-default-week').addEventListener('click', async () => {
+    closeApplyDefaultScheduleModal();
+    await applyDefaultScheduleToWeek();
+  });
+  document.getElementById('btn-apply-default-month').addEventListener('click', async () => {
+    closeApplyDefaultScheduleModal();
+    await applyDefaultScheduleToMonth();
+  });
+  document.getElementById('btn-close-apply-default-modal').addEventListener('click', closeApplyDefaultScheduleModal);
+  document.getElementById('btn-cancel-apply-default').addEventListener('click', closeApplyDefaultScheduleModal);
+  
+  document.getElementById('btn-close-timetable-event-modal').addEventListener('click', closeEventModal);
+  document.getElementById('btn-cancel-timetable-event').addEventListener('click', closeEventModal);
+  document.getElementById('btn-save-timetable-event').addEventListener('click', saveEventForm);
+  
+  document.getElementById('btn-close-timetable-goal-modal').addEventListener('click', closeGoalModal);
+  document.getElementById('btn-cancel-timetable-goal').addEventListener('click', closeGoalModal);
+  document.getElementById('btn-save-timetable-goal').addEventListener('click', saveGoalForm);
+  
+  document.getElementById('btn-close-timetable-transaction-modal').addEventListener('click', closeTransactionModal);
+  document.getElementById('btn-cancel-timetable-transaction').addEventListener('click', closeTransactionModal);
+  document.getElementById('btn-save-timetable-transaction').addEventListener('click', saveTransactionForm);
+  
+  document.getElementById('btn-close-timetable-default-slot-modal').addEventListener('click', closeDefaultSlotModal);
+  document.getElementById('btn-cancel-timetable-default-slot').addEventListener('click', closeDefaultSlotModal);
+  document.getElementById('btn-save-timetable-default-slot').addEventListener('click', saveDefaultSlotForm);
+  
+  const addModalBackdropListener = (modalId, closeFn) => {
+    const modal = document.getElementById(modalId);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeFn();
+      }
+    });
+  };
+  addModalBackdropListener('timetable-event-modal', closeEventModal);
+  addModalBackdropListener('timetable-goal-modal', closeGoalModal);
+  addModalBackdropListener('timetable-transaction-modal', closeTransactionModal);
+  addModalBackdropListener('timetable-default-slot-modal', closeDefaultSlotModal);
+  addModalBackdropListener('apply-default-schedule-modal', closeApplyDefaultScheduleModal);
+}
+
+function setupTimetableSubTabs() {
+  const subNavBtns = document.querySelectorAll('.sub-nav-btn');
+  const subPanes = document.querySelectorAll('.timetable-sub-pane');
+  
+  subNavBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const subtab = btn.getAttribute('data-subtab');
+      
+      subNavBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      subPanes.forEach(pane => {
+        pane.classList.remove('active');
+        if (pane.id === `subpane-${subtab}`) {
+          pane.classList.add('active');
+        }
+      });
+      
+      renderActiveSubTab(subtab);
+    });
+  });
+}
+
+function renderActiveSubTab(subtab) {
+  switch(subtab) {
+    case 'goals':
+      renderTimetableGoals();
+      break;
+    case 'future-plans':
+      renderFuturePlans();
+      break;
+    case 'finance':
+      renderFinanceSubPane();
+      break;
+    case 'incomplete':
+      renderIncompleteTasks();
+      break;
+    case 'default-config':
+      renderDefaultSlots();
+      break;
+  }
+}
+
 

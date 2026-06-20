@@ -40,6 +40,10 @@
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
           <span>Lịch Rảnh</span>
         </button>
+        <button class="nav-btn" data-tab="timetable">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path><path d="M8 18h.01"></path><path d="M12 18h.01"></path><path d="M16 18h.01"></path></svg>
+          <span>Thời Khóa Biểu</span>
+        </button>
         <button class="nav-btn" data-tab="optimizer">
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
           <span>Tối Ưu Lịch</span>
@@ -209,6 +213,195 @@
             <div class="schedule-legend">
               <div class="legend-item"><span class="legend-box available"></span> Rảnh</div>
               <div class="legend-item"><span class="legend-box unavailable"></span> Bận / Không dạy</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB Content: Timetable Management -->
+      <section id="tab-timetable" class="tab-pane">
+        <div class="timetable-tab-layout">
+          <!-- Calendar and Sub-sections -->
+          <div class="timetable-main-panel">
+            <div class="calendar-card">
+              <div class="calendar-card-header">
+                <button type="button" class="btn btn-secondary btn-sm" id="calendar-btn-prev">&larr;</button>
+                <h3 id="calendar-current-month-year">Tháng 06 / 2026</h3>
+                <button type="button" class="btn btn-secondary btn-sm" id="calendar-btn-next">&rarr;</button>
+              </div>
+              <div class="calendar-week-days">
+                <div>T2</div>
+                <div>T3</div>
+                <div>T4</div>
+                <div>T5</div>
+                <div>T6</div>
+                <div>T7</div>
+                <div>CN</div>
+              </div>
+              <div class="calendar-days-grid" id="calendar-days-grid">
+                <!-- Dynamically rendered days -->
+              </div>
+            </div>
+
+            <!-- Subsections Area -->
+            <div class="timetable-details-container">
+              <div class="timetable-sub-nav">
+                <button type="button" class="sub-nav-btn active" data-subtab="goals">Mục tiêu & Tiến độ</button>
+                <button type="button" class="sub-nav-btn" data-subtab="future-plans">Kế hoạch tương lai</button>
+                <button type="button" class="sub-nav-btn" data-subtab="finance">Tổng hợp thu chi</button>
+                <button type="button" class="sub-nav-btn" data-subtab="incomplete">Việc chưa xong</button>
+                <button type="button" class="sub-nav-btn" data-subtab="default-config">Lịch biểu mặc định</button>
+              </div>
+
+              <div class="timetable-sub-content">
+                <!-- Subtab: Goals -->
+                <div class="timetable-sub-pane active" id="subpane-goals">
+                  <div class="sub-pane-header">
+                    <h4>Mục tiêu tập luyện / công việc</h4>
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-open-add-goal-modal">
+                      <span>Thêm mục tiêu mới</span>
+                    </button>
+                  </div>
+                  <div class="goals-list-container" id="timetable-goals-list">
+                    <!-- Populated dynamically -->
+                  </div>
+                </div>
+
+                <!-- Subtab: Future Plans -->
+                <div class="timetable-sub-pane" id="subpane-future-plans">
+                  <div class="future-plans-layout">
+                    <!-- 10 Days -->
+                    <div class="future-plan-column">
+                      <h5>10 ngày tới</h5>
+                      <div class="plan-add-row">
+                        <input type="text" id="input-plan-10days" placeholder="Thêm kế hoạch...">
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-add-plan-10days">+</button>
+                      </div>
+                      <div class="plan-items-list" id="list-plan-10days"></div>
+                    </div>
+
+                    <!-- 1 Year -->
+                    <div class="future-plan-column">
+                      <h5>1 năm tới</h5>
+                      <div class="plan-add-row">
+                        <input type="text" id="input-plan-1year" placeholder="Thêm kế hoạch...">
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-add-plan-1year">+</button>
+                      </div>
+                      <div class="plan-items-list" id="list-plan-1year"></div>
+                    </div>
+
+                    <!-- 10 Years -->
+                    <div class="future-plan-column">
+                      <h5>10 năm tới</h5>
+                      <div class="plan-add-row">
+                        <input type="text" id="input-plan-10years" placeholder="Thêm kế hoạch...">
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-add-plan-10years">+</button>
+                      </div>
+                      <div class="plan-items-list" id="list-plan-10years"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Subtab: Finance -->
+                <div class="timetable-sub-pane" id="subpane-finance">
+                  <div class="finance-sub-layout">
+                    <div class="finance-metrics-grid">
+                      <div class="finance-metric-card income">
+                        <span class="label">Tổng thu tháng này</span>
+                        <strong class="value" id="finance-month-income-total">0đ</strong>
+                      </div>
+                      <div class="finance-metric-card expense">
+                        <span class="label">Tổng chi tháng này</span>
+                        <strong class="value" id="finance-month-expense-total">0đ</strong>
+                      </div>
+                      <div class="finance-metric-card net">
+                        <span class="label">Còn lại (Tích lũy)</span>
+                        <strong class="value" id="finance-month-net-total">0đ</strong>
+                      </div>
+                    </div>
+                    <div class="finance-transactions-container">
+                      <h5>Danh sách giao dịch tháng này</h5>
+                      <div class="table-container">
+                        <table id="finance-transactions-table">
+                          <thead>
+                            <tr>
+                              <th>Ngày</th>
+                              <th>Tiêu đề</th>
+                              <th>Loại</th>
+                              <th>Số tiền</th>
+                              <th style="width: 80px; text-align: center;">Hành động</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <!-- Populated dynamically -->
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Subtab: Incomplete Tasks -->
+                <div class="timetable-sub-pane" id="subpane-incomplete">
+                  <div class="sub-pane-header">
+                    <h4>Đầu việc chưa hoàn thành</h4>
+                  </div>
+                  <div class="incomplete-list-container" id="timetable-incomplete-list">
+                    <!-- Populated dynamically -->
+                  </div>
+                </div>
+
+                <!-- Subtab: Default Config -->
+                <div class="timetable-sub-pane" id="subpane-default-config">
+                  <div class="sub-pane-header">
+                    <h4>Thời khóa biểu mặc định hàng tuần</h4>
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-open-add-default-slot-modal">
+                      <span>Thêm lịch mặc định</span>
+                    </button>
+                  </div>
+                  <p class="section-desc">Định cấu hình các lớp học/công việc cố định trong tuần của bạn. Sau đó bạn có thể chèn nhanh tất cả các lịch này vào tuần hiện tại trên lịch.</p>
+                  <div class="default-slots-list-container" id="timetable-default-slots-list">
+                    <!-- Populated dynamically -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Day Details Sidebar -->
+          <div class="timetable-sidebar-panel">
+            <div class="selected-day-header">
+              <h3 id="timetable-selected-day-label">Ngày 20/06/2026</h3>
+              <span id="timetable-selected-day-weekday">Thứ Bảy</span>
+            </div>
+
+            <div class="timetable-sidebar-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-open-add-event-modal">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>Thêm lịch mới</span>
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-apply-default-schedule">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                <span>Chèn lịch mặc định</span>
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-open-add-transaction-modal">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                <span>Thêm thu chi</span>
+              </button>
+            </div>
+
+            <div class="sidebar-events-list">
+              <h5>Lịch biểu & công việc</h5>
+              <div class="sidebar-list-container" id="timetable-day-events-list">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <div class="sidebar-finance-list">
+              <h5>Thu chi trong ngày</h5>
+              <div class="sidebar-list-container" id="timetable-day-finance-list">
+                <!-- Dynamically populated -->
+              </div>
             </div>
           </div>
         </div>
@@ -635,6 +828,190 @@ git push -u origin main</code></pre>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="btn-cancel-note">Hủy</button>
         <button class="btn btn-primary" id="btn-save-note">Lưu Ghi Nhớ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Add/Edit Timetable Event -->
+  <div class="modal-backdrop" id="timetable-event-modal" style="display: none;">
+    <div class="modal-card" style="max-width: 450px;">
+      <div class="modal-header">
+        <h3 id="timetable-event-modal-title">Thêm lịch biểu mới</h3>
+        <button class="modal-close-btn" id="btn-close-timetable-event-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="timetable-event-form">
+          <input type="hidden" id="timetable-event-id">
+          <div class="form-group">
+            <label for="timetable-event-title">Tiêu đề công việc / Lịch dạy <span class="required">*</span></label>
+            <input type="text" id="timetable-event-title" class="form-control" required placeholder="Ví dụ: Dạy lớp Cầu lông A">
+          </div>
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="timetable-event-date">Ngày thực hiện <span class="required">*</span></label>
+              <input type="date" id="timetable-event-date" class="form-control" required>
+            </div>
+            <div class="form-group col-6">
+              <label for="timetable-event-time">Giờ bắt đầu</label>
+              <input type="time" id="timetable-event-time" class="form-control" value="08:00">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="timetable-event-goal">Liên kết mục tiêu (Goal)</label>
+            <select id="timetable-event-goal" class="form-control">
+              <option value="">-- Chọn mục tiêu để theo dõi tiến độ --</option>
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-timetable-event">Hủy</button>
+        <button class="btn btn-primary" id="btn-save-timetable-event">Lưu lịch biểu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Add/Edit Goal -->
+  <div class="modal-backdrop" id="timetable-goal-modal" style="display: none;">
+    <div class="modal-card" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 id="timetable-goal-modal-title">Thêm mục tiêu mới</h3>
+        <button class="modal-close-btn" id="btn-close-timetable-goal-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="timetable-goal-form">
+          <input type="hidden" id="timetable-goal-id">
+          <div class="form-group">
+            <label for="timetable-goal-title">Tiêu đề mục tiêu <span class="required">*</span></label>
+            <input type="text" id="timetable-goal-title" class="form-control" required placeholder="Ví dụ: Dạy hết 10 buổi cầu lông">
+          </div>
+          <div class="form-group">
+            <label for="timetable-goal-target">Số buổi / Số công việc cần hoàn thành (Số lượng)</label>
+            <input type="number" id="timetable-goal-target" class="form-control" value="10" min="1">
+            <span class="settings-desc">Tiến độ sẽ tự động tăng khi bạn tích hoàn thành các công việc liên kết với mục tiêu này.</span>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-timetable-goal">Hủy</button>
+        <button class="btn btn-primary" id="btn-save-timetable-goal">Lưu mục tiêu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Add/Edit Transaction (Finance) -->
+  <div class="modal-backdrop" id="timetable-transaction-modal" style="display: none;">
+    <div class="modal-card" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 id="timetable-transaction-modal-title">Thêm giao dịch thu chi</h3>
+        <button class="modal-close-btn" id="btn-close-timetable-transaction-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="timetable-transaction-form">
+          <input type="hidden" id="timetable-transaction-id">
+          <div class="form-group">
+            <label for="timetable-transaction-title">Nội dung giao dịch <span class="required">*</span></label>
+            <input type="text" id="timetable-transaction-title" class="form-control" required placeholder="Ví dụ: Thu học phí học viên A, Mua vợt cầu lông...">
+          </div>
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="timetable-transaction-date">Ngày giao dịch <span class="required">*</span></label>
+              <input type="date" id="timetable-transaction-date" class="form-control" required>
+            </div>
+            <div class="form-group col-6">
+              <label for="timetable-transaction-type">Loại giao dịch</label>
+              <select id="timetable-transaction-type" class="form-control">
+                <option value="income">Thu (Income)</option>
+                <option value="expense">Chi (Expense)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="timetable-transaction-amount">Số tiền (VNĐ) <span class="required">*</span></label>
+            <input type="number" id="timetable-transaction-amount" class="form-control" required min="0" step="1000" placeholder="Số tiền...">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-timetable-transaction">Hủy</button>
+        <button class="btn btn-primary" id="btn-save-timetable-transaction">Lưu giao dịch</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Add/Edit Default Weekly Slot -->
+  <div class="modal-backdrop" id="timetable-default-slot-modal" style="display: none;">
+    <div class="modal-card" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 id="timetable-default-slot-modal-title">Thêm lịch mặc định</h3>
+        <button class="modal-close-btn" id="btn-close-timetable-default-slot-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="timetable-default-slot-form">
+          <input type="hidden" id="timetable-default-slot-id">
+          <div class="form-group">
+            <label for="timetable-default-slot-title">Tên lịch biểu mặc định <span class="required">*</span></label>
+            <input type="text" id="timetable-default-slot-title" class="form-control" required placeholder="Ví dụ: Dạy lớp Cầu lông A">
+          </div>
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="timetable-default-slot-day">Thứ trong tuần <span class="required">*</span></label>
+              <select id="timetable-default-slot-day" class="form-control">
+                <option value="1">Thứ 2</option>
+                <option value="2">Thứ 3</option>
+                <option value="3">Thứ 4</option>
+                <option value="4">Thứ 5</option>
+                <option value="5">Thứ 6</option>
+                <option value="6">Thứ 7</option>
+                <option value="0">Chủ Nhật</option>
+                <option value="all">Áp dụng tất cả các ngày trong tuần</option>
+              </select>
+            </div>
+            <div class="form-group col-6">
+              <label for="timetable-default-slot-time">Giờ bắt đầu</label>
+              <input type="time" id="timetable-default-slot-time" class="form-control" value="08:00">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="timetable-default-slot-goal">Liên kết mục tiêu (Goal)</label>
+            <select id="timetable-default-slot-goal" class="form-control">
+              <option value="">-- Chọn mục tiêu --</option>
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-timetable-default-slot">Hủy</button>
+        <button class="btn btn-primary" id="btn-save-timetable-default-slot">Lưu lịch mặc định</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Apply Default Schedule Choices -->
+  <div class="modal-backdrop" id="apply-default-schedule-modal" style="display: none;">
+    <div class="modal-card" style="max-width: 420px;">
+      <div class="modal-header">
+        <h3>Chèn lịch mặc định</h3>
+        <button class="modal-close-btn" id="btn-close-apply-default-modal">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+        <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.5; text-align: center; margin-bottom: 10px;">
+          Bạn muốn áp dụng lịch biểu mặc định như thế nào cho thời gian này?
+        </p>
+        <button type="button" class="btn btn-primary" id="btn-apply-default-day" style="background: linear-gradient(135deg, var(--accent-secondary), rgba(0, 240, 255, 0.8)); color: #000; font-weight: 600; padding: 12px;">
+          Chèn riêng ngày đó (<span id="apply-default-day-name">Thứ...</span>)
+        </button>
+        <button type="button" class="btn btn-primary" id="btn-apply-default-week" style="padding: 12px;">
+          Chèn cả tuần
+        </button>
+        <button type="button" class="btn btn-primary" id="btn-apply-default-month" style="padding: 12px; background: linear-gradient(135deg, #a855f7, #6366f1); color: #fff; font-weight: 600; border: none;">
+          Chèn cả tháng
+        </button>
+      </div>
+      <div class="modal-footer" style="justify-content: center; padding: 15px 24px;">
+        <button class="btn btn-secondary" id="btn-cancel-apply-default">Hủy</button>
       </div>
     </div>
   </div>
