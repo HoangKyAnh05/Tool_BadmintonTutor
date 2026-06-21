@@ -94,12 +94,36 @@ ipcMain.handle('load-data', () => {
 });
 
 // IPC Handler: Save Data
-ipcMain.handle('save-data', (event, data) => {
+let isSaving = false;
+let pendingSaveData = null;
+
+async function writeDataFile(data) {
+  if (isSaving) {
+    pendingSaveData = data;
+    return;
+  }
+  isSaving = true;
   try {
-    fs.writeFileSync(DATA_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
-    return { success: true };
+    await fs.promises.writeFile(DATA_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
   } catch (error) {
     console.error("Error saving data file:", error);
+    throw error;
+  } finally {
+    isSaving = false;
+    if (pendingSaveData) {
+      const nextData = pendingSaveData;
+      pendingSaveData = null;
+      await writeDataFile(nextData);
+    }
+  }
+}
+
+ipcMain.handle('save-data', async (event, data) => {
+  try {
+    await writeDataFile(data);
+    return { success: true };
+  } catch (error) {
+    console.error("Error in save-data IPC handler:", error);
     return { success: false, error: error.message };
   }
 });

@@ -813,7 +813,14 @@ function renderStudents() {
 
 function setupStudentsEvents() {
   btnOpenAddStudentModal.addEventListener('click', () => openStudentModal());
-  studentSearchInput.addEventListener('input', () => renderStudents());
+  
+  let searchTimeout;
+  studentSearchInput.addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      renderStudents();
+    }, 150);
+  });
 }
 
 // Student Modal logic
@@ -1129,14 +1136,6 @@ function renderScheduleInteractiveGrid() {
     }
   }
 
-  // Global mouseup release listener
-  window.addEventListener('mouseup', () => {
-    if (isMouseDown) {
-      isMouseDown = false;
-      saveData(); // Save updates to file when user releases click
-    }
-  });
-
   updateScheduleGridCellsStatus();
 }
 
@@ -1180,7 +1179,13 @@ function toggleSlotAvailability(cell, slotId, isAvailable) {
 }
 
 function setupScheduleEvents() {
-  // Already bound inside builder
+  // Global mouseup release listener
+  window.addEventListener('mouseup', () => {
+    if (isMouseDown) {
+      isMouseDown = false;
+      saveData(); // Save updates to file when user releases click
+    }
+  });
 }
 
 // --- OPTIMIZER TAB ---
@@ -1876,8 +1881,13 @@ async function deleteNote(id, title) {
 // Setup Event Listeners for Quick Notes
 function setupQuickNotesEvents() {
   // Live Search
+  let notesSearchTimeout;
   notesSearchInput.addEventListener('input', (e) => {
-    renderQuickNotes(e.target.value);
+    const val = e.target.value;
+    clearTimeout(notesSearchTimeout);
+    notesSearchTimeout = setTimeout(() => {
+      renderQuickNotes(val);
+    }, 150);
   });
 
   // Open Add Modal
@@ -3189,8 +3199,12 @@ function setupFriendsEvents() {
 
   // Search input live filtering
   if (friendSearchInput) {
+    let friendSearchTimeout;
     friendSearchInput.addEventListener('input', () => {
-      renderFriendsList(friendSearchInput.value);
+      clearTimeout(friendSearchTimeout);
+      friendSearchTimeout = setTimeout(() => {
+        renderFriendsList(friendSearchInput.value);
+      }, 150);
     });
   }
 
