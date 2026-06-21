@@ -14,7 +14,12 @@ const DEFAULT_DATA = {
     aiModel: 'gemini-2.5-flash'
   },
   coachAvailability: {}, // { "Mon-08:00": true, ... }
-  students: []
+  students: [],
+  friends: [],
+  captainHistory: [],
+  trendHistory: [],
+  friendsHistory: [],
+  friendsAiOutput: ""
 };
 
 function createWindow() {

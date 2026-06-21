@@ -293,6 +293,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupSettingsEvents();
   setupLessonPrepEvents();
   setupQuickNotesEvents();
+  setupFriendsEvents();
+  setupCaptainEvents();
+  setupTrendPredictionEvents();
 
   // Render initial tab
   renderDashboard();
@@ -315,6 +318,11 @@ async function loadData() {
   if (!state.students) state.students = [];
   if (!state.preparedLessons) state.preparedLessons = [];
   if (!state.quickNotes) state.quickNotes = [];
+  if (!state.friends) state.friends = [];
+  if (!state.captainHistory) state.captainHistory = [];
+  if (!state.trendHistory) state.trendHistory = [];
+  if (!state.friendsHistory) state.friendsHistory = [];
+  if (!state.friendsAiOutput) state.friendsAiOutput = "";
 
   // Timetable State Initialization
   if (!state.timetableEvents) state.timetableEvents = [];
@@ -392,6 +400,19 @@ function setupNav() {
         case 'quick-notes':
           pageTitle.innerText = "Sổ Tay Ghi Nhớ & Link";
           renderQuickNotes();
+          break;
+        case 'friends':
+          pageTitle.innerText = "Quản Lý Bạn Bè & Gợi Ý AI";
+          renderFriendsList();
+          renderFriendsTab();
+          break;
+        case 'captain':
+          pageTitle.innerText = "Luyện Tập Đội Trưởng AI";
+          renderCaptainTab();
+          break;
+        case 'trend-prediction':
+          pageTitle.innerText = "Dự Đoán Content Phản Xạ Trước";
+          renderTrendPredictionTab();
           break;
         case 'settings':
           pageTitle.innerText = "Cấu Hình Hệ Thống";
@@ -764,10 +785,16 @@ function renderStudents() {
         </div>
       </div>
       
+
+
+
       <div class="student-card-footer">
         <button class="btn btn-secondary btn-sm btn-edit-student" data-id="${st.id}">
           <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
           Sửa
+        </button>
+        <button class="btn btn-secondary btn-sm btn-add-to-friends" data-id="${st.id}" style="color: var(--accent-secondary); border-color: rgba(0, 240, 255, 0.2);">
+          + Bạn bè
         </button>
         <button class="btn btn-danger-outline btn-sm btn-delete-student" data-id="${st.id}">
           Xóa
@@ -777,6 +804,7 @@ function renderStudents() {
 
     // Wire button events
     card.querySelector('.btn-edit-student').addEventListener('click', () => openStudentModal(st.id));
+    card.querySelector('.btn-add-to-friends').addEventListener('click', () => copyStudentToFriend(st.id));
     card.querySelector('.btn-delete-student').addEventListener('click', () => deleteStudent(st.id));
 
     studentsGridContainer.appendChild(card);
@@ -3143,6 +3171,898 @@ function renderActiveSubTab(subtab) {
     case 'default-config':
       renderDefaultSlots();
       break;
+  }
+}
+
+// ==========================================================================
+// FRIENDS MANAGEMENT & AI CONVERSATION SUGGESTIONS
+// ==========================================================================
+function setupFriendsEvents() {
+  const btnOpenAddFriendModal = document.getElementById('btn-open-add-friend-modal');
+  const btnCloseFriendModal = document.getElementById('btn-close-friend-modal');
+  const btnCancelFriend = document.getElementById('btn-cancel-friend');
+  const btnSaveFriend = document.getElementById('btn-save-friend');
+  const btnGenerateFriendsAi = document.getElementById('btn-generate-friends-ai');
+  const btnCopyFriendsAi = document.getElementById('btn-copy-friends-ai');
+  const friendSearchInput = document.getElementById('friend-search-input');
+  const friendModal = document.getElementById('friend-modal');
+
+  // Search input live filtering
+  if (friendSearchInput) {
+    friendSearchInput.addEventListener('input', () => {
+      renderFriendsList(friendSearchInput.value);
+    });
+  }
+
+  // Open add modal
+  if (btnOpenAddFriendModal) {
+    btnOpenAddFriendModal.addEventListener('click', () => {
+      document.getElementById('friend-modal-title').innerText = "Thêm Bạn Mới";
+      document.getElementById('friend-form').reset();
+      document.getElementById('friend-id').value = '';
+      friendModal.style.display = 'flex';
+    });
+  }
+
+  // Close modals triggers
+  const closeFn = () => {
+    friendModal.style.display = 'none';
+  };
+  if (btnCloseFriendModal) btnCloseFriendModal.addEventListener('click', closeFn);
+  if (btnCancelFriend) btnCancelFriend.addEventListener('click', closeFn);
+  if (friendModal) {
+    friendModal.addEventListener('click', (e) => {
+      if (e.target === friendModal) closeFn();
+    });
+  }
+
+  // Save friend
+  if (btnSaveFriend) {
+    btnSaveFriend.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await saveFriendForm();
+    });
+  }
+
+  // Generate conversation suggestions
+  if (btnGenerateFriendsAi) {
+    btnGenerateFriendsAi.addEventListener('click', generateFriendsAI);
+  }
+
+  // Render initial history list
+  renderFriendsHistoryList();
+}
+
+function renderFriendsList(query = '') {
+  const container = document.getElementById('friends-list-container');
+  if (!container) return;
+
+  container.innerHTML = '';
+  const filtered = state.friends.filter(f => 
+    f.name.toLowerCase().includes(query.toLowerCase()) || 
+    (f.characteristics && f.characteristics.toLowerCase().includes(query.toLowerCase()))
+  );
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<p class="empty-msg" style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px 0;">Chưa có bạn bè nào phù hợp.</p>`;
+    return;
+  }
+
+  filtered.forEach(f => {
+    const card = document.createElement('div');
+    card.className = 'note-card'; // Reuses notes design system for consistency
+    card.style.padding = '12px';
+    card.style.display = 'flex';
+    card.style.flexDirection = 'column';
+    card.style.gap = '8px';
+
+    card.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <strong style="color: var(--accent-primary); font-size: 15px;">${f.name}</strong>
+        <span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.05); color: var(--text-muted);">${f.gender}</span>
+      </div>
+      ${f.phone ? `<div style="font-size: 12px; color: var(--text-muted);">SĐT: ${f.phone}</div>` : ''}
+      <div style="font-size: 12px; color: var(--text-color); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4;">
+        ${f.characteristics || 'Chưa cập nhật đặc điểm.'}
+      </div>
+      <div style="display: flex; gap: 8px; margin-top: 4px;">
+        <button class="btn btn-secondary btn-sm btn-edit-friend" data-id="${f.id}" style="padding: 4px 8px; font-size: 11px;">Sửa</button>
+        <button class="btn btn-danger-outline btn-sm btn-delete-friend" data-id="${f.id}" style="padding: 4px 8px; font-size: 11px;">Xóa</button>
+      </div>
+    `;
+
+    card.querySelector('.btn-edit-friend').addEventListener('click', () => openFriendModal(f.id));
+    card.querySelector('.btn-delete-friend').addEventListener('click', () => deleteFriend(f.id));
+
+    container.appendChild(card);
+  });
+}
+
+function openFriendModal(friendId) {
+  const friend = state.friends.find(f => f.id === friendId);
+  const friendModal = document.getElementById('friend-modal');
+  if (!friend || !friendModal) return;
+
+  document.getElementById('friend-modal-title').innerText = "Sửa Thông Tin Bạn Bè";
+  document.getElementById('friend-id').value = friend.id;
+  document.getElementById('friend-name').value = friend.name;
+  document.getElementById('friend-gender').value = friend.gender;
+  document.getElementById('friend-phone').value = friend.phone || '';
+  document.getElementById('friend-characteristics').value = friend.characteristics || '';
+  
+  friendModal.style.display = 'flex';
+}
+
+async function saveFriendForm() {
+  const idVal = document.getElementById('friend-id').value;
+  const nameVal = document.getElementById('friend-name').value.trim();
+  const genderVal = document.getElementById('friend-gender').value;
+  const phoneVal = document.getElementById('friend-phone').value.trim();
+  const charVal = document.getElementById('friend-characteristics').value.trim();
+
+  if (!nameVal || !charVal) {
+    showToast("Vui lòng điền tên và đặc điểm của bạn bè!", "error");
+    return;
+  }
+
+  if (idVal) {
+    // Edit existing friend
+    const index = state.friends.findIndex(f => f.id === idVal);
+    if (index !== -1) {
+      state.friends[index] = {
+        ...state.friends[index],
+        name: nameVal,
+        gender: genderVal,
+        phone: phoneVal,
+        characteristics: charVal
+      };
+    }
+  } else {
+    // Add new friend
+    state.friends.push({
+      id: Date.now().toString(),
+      name: nameVal,
+      gender: genderVal,
+      phone: phoneVal,
+      characteristics: charVal,
+      date: new Date().toLocaleString('vi-VN')
+    });
+  }
+
+  await saveData();
+  showToast("Đã lưu thông tin bạn bè!", "success");
+  document.getElementById('friend-modal').style.display = 'none';
+  const searchInput = document.getElementById('friend-search-input');
+  const query = searchInput ? searchInput.value : '';
+  renderFriendsList(query);
+}
+
+async function deleteFriend(friendId) {
+  const friend = state.friends.find(f => f.id === friendId);
+  if (!friend) return;
+
+  if (confirm(`Bạn có chắc chắn muốn xóa bạn bè "${friend.name}" khỏi danh sách?`)) {
+    state.friends = state.friends.filter(f => f.id !== friendId);
+    await saveData();
+    showToast("Đã xóa bạn bè khỏi danh sách!", "success");
+    const searchInput = document.getElementById('friend-search-input');
+    const query = searchInput ? searchInput.value : '';
+    renderFriendsList(query);
+  }
+}
+
+function copyStudentToFriend(studentId) {
+  const student = state.students.find(s => s.id === studentId);
+  if (!student) {
+    showToast("Không tìm thấy học viên!", "error");
+    return;
+  }
+
+  const exists = state.friends.some(f => f.name.toLowerCase() === student.name.toLowerCase());
+  if (exists) {
+    showToast(`${student.name} đã có trong danh sách bạn bè!`, "warning");
+    return;
+  }
+
+  const traits = [];
+  if (student.gender) traits.push(`Giới tính: ${student.gender}`);
+  if (student.strengths) traits.push(`Điểm mạnh: ${student.strengths}`);
+  if (student.weaknesses) traits.push(`Điểm yếu: ${student.weaknesses}`);
+  if (student.highlights) traits.push(`Đặc điểm nổi bật: ${student.highlights}`);
+  if (student.tasks && student.tasks.length > 0) {
+    traits.push(`Mục tiêu 30 ngày: ${student.tasks.map(t => t.text).join(', ')}`);
+  }
+
+  state.friends.push({
+    id: Date.now().toString(),
+    name: student.name,
+    gender: student.gender || 'Nam',
+    phone: student.phone || '',
+    characteristics: traits.join('. '),
+    date: new Date().toLocaleString('vi-VN')
+  });
+
+  saveData();
+  showToast(`Đã thêm ${student.name} sang danh sách bạn bè!`, "success");
+  
+  if (document.getElementById('tab-friends').classList.contains('active')) {
+    renderFriendsList();
+  }
+}
+
+let activeFriendsHistoryId = null;
+
+async function generateFriendsAI() {
+  if (state.friends.length === 0) {
+    showToast("Danh sách bạn bè trống! Hãy thêm bạn bè hoặc nhập từ Học viên trước.", "warning");
+    return;
+  }
+
+  const outputContainer = document.getElementById('friends-ai-output-container');
+  const btnCopy = document.getElementById('btn-copy-friends-ai');
+  if (!outputContainer) return;
+
+  outputContainer.innerHTML = `
+    <div class="ai-empty-state">
+      <div class="ai-empty-icon">
+        <svg class="spinner" viewBox="0 0 24 24" width="48" height="48" stroke="var(--accent-secondary)" stroke-width="3" fill="none" style="animation: spin 1s linear infinite;">
+          <circle cx="12" cy="12" r="10"></circle>
+        </svg>
+      </div>
+      <h3>AI đang phân tích và thiết kế gợi ý nói chuyện...</h3>
+      <p>Hệ thống đang lập kịch bản bắt chuyện hàng loạt dựa trên sở thích và trend mới cho ${state.friends.length} người bạn. Quá trình này mất khoảng 5 - 15 giây.</p>
+    </div>
+  `;
+  if (btnCopy) btnCopy.style.display = 'none';
+
+  const friendsString = state.friends.map((f, i) => `${i + 1}. Tên: ${f.name} (${f.gender}) - Đặc điểm/Sở thích: ${f.characteristics}`).join('\n');
+
+  const detailedPrompt = `
+Hãy đóng vai là một trợ lý giao tiếp xã hội cực kỳ tâm lý và am hiểu xu hướng (hot trends).
+Dưới đây là danh sách bạn bè của tôi:
+${friendsString}
+
+Hãy tạo cho TẤT CẢ các bạn này, mỗi người đúng 10 câu hỏi thăm hoặc gợi mở nói chuyện (conversation starters).
+Yêu cầu thiết kế:
+1. Mỗi người bạn phải có đúng 10 câu gợi chuyện cá nhân hóa hoàn toàn dựa trên đặc điểm, tính cách, giới tính và sở thích của họ.
+2. Hãy lồng ghép thông minh các trào lưu hot trend hiện tại một cách phù hợp (ví dụ: các trend thịnh hành trên TikTok/Facebook, các câu nói hài hước, phim/ảnh đang hot, âm nhạc hot, giải đấu thể thao cầu lông/bóng đá đang diễn ra...).
+3. Cách nói chuyện tự nhiên, gần gũi, ấm áp hoặc hài hước (tùy theo tính cách của họ), đúng chất bạn bè nói chuyện đời thường ở Việt Nam, tránh kiểu hành văn máy móc, trang trọng.
+
+Đầu ra trả về bằng tiếng Việt, định dạng Markdown thật đẹp mắt. Định dạng cho từng người bạn như sau:
+## 🤝 Gợi ý trò chuyện với **[Tên người bạn]**
+*(Giải thích ngắn gọn ý tưởng bắt chuyện và hot trend áp dụng cho người bạn này)*
+1. [Câu hỏi/mở đầu 1]
+2. [Câu hỏi/mở đầu 2]
+...
+10. [Câu hỏi/mở đầu 10]
+
+---
+`;
+
+  try {
+    const result = await window.api.callAI({
+      provider: state.settings.apiProvider,
+      apiKey: state.settings.apiKey,
+      model: state.settings.aiModel,
+      prompt: detailedPrompt
+    });
+
+    if (result.success) {
+      const dateStr = new Date().toLocaleString('vi-VN');
+      const titleStr = `Gợi ý cho ${state.friends.length} người bạn`;
+      const newItem = {
+        id: Date.now().toString(),
+        title: titleStr,
+        content: result.text,
+        date: dateStr
+      };
+      
+      if (!state.friendsHistory) state.friendsHistory = [];
+      state.friendsHistory.unshift(newItem);
+      activeFriendsHistoryId = newItem.id;
+      
+      state.friendsAiOutput = result.text;
+      await saveData();
+
+      renderFriendsHistoryList();
+      selectFriendsHistoryItem(newItem.id);
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (err) {
+    console.error(err);
+    outputContainer.innerHTML = `
+      <div class="ai-empty-state">
+        <div class="ai-empty-icon" style="color: var(--accent-red)">
+          <svg viewBox="0 0 24 24" width="60" height="60" stroke="currentColor" stroke-width="1.5" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        </div>
+        <h3>Lỗi kết nối AI</h3>
+        <p>${err.message || "Không thể kết nối với máy chủ AI. Vui lòng cấu hình khóa API trong mục Cấu Hình."}</p>
+      </div>
+    `;
+  }
+}
+
+function renderFriendsTab() {
+  renderFriendsHistoryList();
+  if (activeFriendsHistoryId) {
+    selectFriendsHistoryItem(activeFriendsHistoryId);
+  } else if (state.friendsHistory && state.friendsHistory.length > 0) {
+    selectFriendsHistoryItem(state.friendsHistory[0].id);
+  } else {
+    showFriendsEmptyState();
+  }
+}
+
+function showFriendsEmptyState() {
+  const outputContainer = document.getElementById('friends-ai-output-container');
+  const btnCopy = document.getElementById('btn-copy-friends-ai');
+  if (!outputContainer) return;
+
+  outputContainer.innerHTML = `
+    <div class="ai-empty-state">
+      <div class="ai-empty-icon">
+        <svg viewBox="0 0 24 24" width="60" height="60" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+      </div>
+      <h3>Gợi ý trò chuyện thông minh</h3>
+      <p>Thêm bạn bè và nhập đặc điểm của họ ở danh sách bên trái. Bấm nút "AI Gợi Ý Hỏi Thăm (Tất cả)" để hệ thống sinh ra mỗi người 10 câu hỏi thăm/chuyện trò dựa trên sở thích cá nhân kết hợp các hot trend hiện tại.</p>
+    </div>
+  `;
+  if (btnCopy) btnCopy.style.display = 'none';
+}
+
+function renderFriendsHistoryList() {
+  const container = document.getElementById('friends-history-container');
+  if (!container) return;
+
+  container.innerHTML = '';
+  if (!state.friendsHistory || state.friendsHistory.length === 0) {
+    container.innerHTML = '<p class="empty-msg" style="padding: 10px 0; color: var(--text-muted); font-size: 13px; text-align: center;">Chưa có lịch sử gợi ý.</p>';
+    return;
+  }
+
+  state.friendsHistory.forEach(item => {
+    const div = document.createElement('div');
+    div.className = `prep-history-item ${activeFriendsHistoryId === item.id ? 'active' : ''}`;
+    
+    div.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 2px; overflow: hidden; flex-grow: 1; padding-right: 8px;">
+        <strong style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-color);">${item.title}</strong>
+        <span style="font-size: 11px; color: var(--text-muted);">${item.date}</span>
+      </div>
+      <button type="button" class="btn-delete-friends-history-item" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1;">&times;</button>
+    `;
+    div.addEventListener('click', () => selectFriendsHistoryItem(item.id));
+    div.querySelector('.btn-delete-friends-history-item').addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteFriendsHistoryItem(item.id);
+    });
+    container.appendChild(div);
+  });
+}
+
+function selectFriendsHistoryItem(id) {
+  const item = state.friendsHistory.find(h => h.id === id);
+  if (!item) return;
+
+  activeFriendsHistoryId = id;
+  renderFriendsHistoryList();
+
+  const outputContainer = document.getElementById('friends-ai-output-container');
+  const btnCopy = document.getElementById('btn-copy-friends-ai');
+  if (!outputContainer) return;
+
+  outputContainer.innerHTML = parseMarkdownToHTML(item.content);
+  if (btnCopy) {
+    btnCopy.style.display = 'inline-flex';
+    btnCopy.onclick = () => {
+      navigator.clipboard.writeText(item.content);
+      showToast("Đã sao chép toàn bộ gợi ý hội thoại!", "success");
+    };
+  }
+}
+
+async function deleteFriendsHistoryItem(id) {
+  if (!confirm("Bạn có chắc chắn muốn xóa lịch sử gợi ý này?")) return;
+
+  state.friendsHistory = state.friendsHistory.filter(h => h.id !== id);
+  if (activeFriendsHistoryId === id) {
+    activeFriendsHistoryId = null;
+  }
+
+  await saveData();
+  renderFriendsHistoryList();
+  
+  if (activeFriendsHistoryId) {
+    selectFriendsHistoryItem(activeFriendsHistoryId);
+  } else if (state.friendsHistory && state.friendsHistory.length > 0) {
+    selectFriendsHistoryItem(state.friendsHistory[0].id);
+  } else {
+    showFriendsEmptyState();
+  }
+  showToast("Đã xóa lịch sử gợi ý thành công!", "success");
+}
+
+// ==========================================================================
+// CAPTAIN ROLEPLAY SIMULATOR LOGIC
+// ==========================================================================
+let activeCaptainHistoryId = null;
+
+function setupCaptainEvents() {
+  const btnGenerateCaptain = document.getElementById('btn-generate-captain-ai');
+  const quickBtns = document.querySelectorAll('.captain-quick-btn');
+
+  if (btnGenerateCaptain) {
+    btnGenerateCaptain.addEventListener('click', generateCaptainAI);
+  }
+
+  // Quick prompt buttons
+  quickBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const goalText = btn.getAttribute('data-goal');
+      const textarea = document.getElementById('captain-goal');
+      if (textarea && goalText) {
+        textarea.value = goalText;
+      }
+    });
+  });
+
+  // Render initial list
+  renderCaptainHistoryList();
+}
+
+function renderCaptainTab() {
+  renderCaptainHistoryList();
+  if (activeCaptainHistoryId) {
+    selectCaptainHistoryItem(activeCaptainHistoryId);
+  } else {
+    showCaptainEmptyState();
+  }
+}
+
+function showCaptainEmptyState() {
+  const outputContainer = document.getElementById('captain-ai-output-container');
+  const btnCopy = document.getElementById('btn-copy-captain-ai');
+  if (outputContainer) {
+    outputContainer.innerHTML = `
+      <div class="ai-empty-state">
+        <div class="ai-empty-icon">
+          <svg viewBox="0 0 24 24" width="60" height="60" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        </div>
+        <h3>Trở thành Đội Trưởng tài ba</h3>
+        <p>Nhập tình huống của đội ở bảng bên trái. AI sẽ phân tích và lập tức tạo ra toàn bộ thoại hội ý, lời thúc giục, phương pháp lãnh đạo và các khẩu hiệu chiến thắng kiêu hãnh hô to khi đạt goal để bạn luyện tập.</p>
+      </div>
+    `;
+  }
+  if (btnCopy) btnCopy.style.display = 'none';
+}
+
+function renderCaptainHistoryList() {
+  const container = document.getElementById('captain-history-container');
+  if (!container) return;
+
+  container.innerHTML = '';
+  if (!state.captainHistory || state.captainHistory.length === 0) {
+    container.innerHTML = '<p class="empty-msg" style="padding: 10px 0; color: var(--text-muted); font-size: 13px; text-align: center;">Chưa có kịch bản đội trưởng nào.</p>';
+    return;
+  }
+
+  state.captainHistory.forEach(item => {
+    const div = document.createElement('div');
+    div.className = `prep-history-item ${activeCaptainHistoryId === item.id ? 'active' : ''}`;
+    div.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.03); margin-bottom: 6px; cursor: pointer; border: 1px solid transparent; transition: all 0.2s;";
+    if (activeCaptainHistoryId === item.id) {
+      div.style.background = "rgba(168, 85, 247, 0.1)";
+      div.style.borderColor = "rgba(168, 85, 247, 0.3)";
+    }
+
+    div.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 2px; overflow: hidden; flex-grow: 1; padding-right: 8px;">
+        <strong style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-color);">${item.goal}</strong>
+        <span style="font-size: 11px; color: var(--text-muted);">${item.date}</span>
+      </div>
+      <button type="button" class="btn-delete-captain-item" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1;">&times;</button>
+    `;
+
+    div.addEventListener('click', (e) => {
+      if (e.target.classList.contains('btn-delete-captain-item')) return;
+      selectCaptainHistoryItem(item.id);
+    });
+
+    div.querySelector('.btn-delete-captain-item').addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteCaptainHistoryItem(item.id);
+    });
+
+    container.appendChild(div);
+  });
+}
+
+function selectCaptainHistoryItem(id) {
+  activeCaptainHistoryId = id;
+  const item = state.captainHistory.find(c => c.id === id);
+  if (!item) return;
+
+  renderCaptainHistoryList();
+
+  document.getElementById('captain-goal').value = item.goal;
+  document.getElementById('captain-style').value = item.style;
+  document.getElementById('captain-team-desc').value = item.teamDesc;
+
+  const outputContainer = document.getElementById('captain-ai-output-container');
+  const btnCopy = document.getElementById('btn-copy-captain-ai');
+
+  if (outputContainer) {
+    outputContainer.innerHTML = parseMarkdownToHTML(item.content);
+  }
+  if (btnCopy) {
+    btnCopy.style.display = 'inline-flex';
+    btnCopy.onclick = () => {
+      navigator.clipboard.writeText(item.content);
+      showToast("Đã sao chép kịch bản phát ngôn đội trưởng!", "success");
+    };
+  }
+}
+
+async function deleteCaptainHistoryItem(id) {
+  if (confirm("Bạn có chắc chắn muốn xóa lịch sử kịch bản này?")) {
+    state.captainHistory = state.captainHistory.filter(c => c.id !== id);
+    if (activeCaptainHistoryId === id) {
+      activeCaptainHistoryId = null;
+      showCaptainEmptyState();
+    }
+    await saveData();
+    renderCaptainHistoryList();
+  }
+}
+
+async function generateCaptainAI() {
+  const goalVal = document.getElementById('captain-goal').value.trim();
+  const styleVal = document.getElementById('captain-style').value;
+  const teamDescVal = document.getElementById('captain-team-desc').value.trim();
+  const outputContainer = document.getElementById('captain-ai-output-container');
+  const btnCopy = document.getElementById('btn-copy-captain-ai');
+
+  if (!goalVal) {
+    showToast("Vui lòng nhập tình huống & mục tiêu của đội!", "warning");
+    return;
+  }
+
+  if (!outputContainer) return;
+
+  outputContainer.innerHTML = `
+    <div class="ai-empty-state">
+      <div class="ai-empty-icon">
+        <svg class="spinner" viewBox="0 0 24 24" width="48" height="48" stroke="var(--accent-secondary)" stroke-width="3" fill="none" style="animation: spin 1s linear infinite;">
+          <circle cx="12" cy="12" r="10"></circle>
+        </svg>
+      </div>
+      <h3>AI đang xây dựng chiến thuật và kịch bản thoại đội trưởng...</h3>
+      <p>Đang chuẩn bị lời dặn dò, động viên và khẩu hiệu chiến thắng. Quá trình này mất khoảng 5 - 15 giây.</p>
+    </div>
+  `;
+  if (btnCopy) btnCopy.style.display = 'none';
+
+  const detailedPrompt = `
+Hãy đóng vai là một người Đội trưởng (Captain) tài ba, truyền cảm hứng mạnh mẽ, có tư duy chiến thuật nhạy bén và khả năng dẫn dắt xuất sắc.
+Tôi đang cần huấn luyện để trở thành một đội trưởng tốt trong bối cảnh sau:
+
+**Tình huống & Mục tiêu của đội:**
+${goalVal}
+
+**Phong cách của Đội trưởng:**
+${styleVal}
+
+**Đặc điểm thành viên trong đội:**
+${teamDescVal || 'Các thành viên bình thường.'}
+
+Hãy thiết kế cho tôi một kịch bản phát ngôn và phương án hành động chi tiết để dẫn dắt đội tốt nhất nhằm đạt mục tiêu. Định dạng Markdown đẹp mắt, bao gồm các phần chính sau:
+
+1. **📢 Lời thoại Hội ý / Khích lệ tinh thần (Team Talk - Trước giờ G hoặc giữa giờ):**
+   - Viết lời thoại đầy đủ dưới dạng ngôi thứ nhất ("Tôi" - người đội trưởng nói trực tiếp).
+   - Lời thoại phải giải tỏa tâm lý căng thẳng, tiếp thêm động lực mạnh mẽ, làm cho các thành viên khao khát cống hiến hết mình.
+   - Thể hiện đúng phong cách: "${styleVal}".
+
+2. **📋 Chỉ đạo Chiến thuật & Phân công nhiệm vụ (Tactical & Action Plan):**
+   - Hướng dẫn cụ thể cách tổ chức đội hình, cách phối hợp ăn ý nhất.
+   - Lời dặn dò ngắn gọn, dễ nhớ nhưng thực chiến để tăng tối đa tính đồng đội.
+
+3. **⚡ Lời thoại chấn chỉnh khi team lục đục (Conflict Resolution & Admonishment):**
+   - Thiết kế kịch bản thoại khi nội bộ xảy ra mâu thuẫn, đổ lỗi lẫn nhau, hoặc mất tinh thần chiến đấu giữa chừng.
+   - Lời thoại ngôi thứ nhất ("Tôi" - người đội trưởng) mắng, nhắc nhở hoặc cảnh báo nghiêm khắc, đánh thẳng vào lòng tự trọng và trách nhiệm của từng người để chấn chỉnh kỷ luật tức thì.
+
+4. **🔥 Khẩu hiệu & Lời thoại Ăn mừng kiêu hãnh (Goal Celebration Shoutouts):**
+   - Các khẩu hiệu ngắn, hào hùng hoặc các lời thoại hô vang thể hiện sự tự hào, sung sướng vỡ òa khi đội chính thức đạt được mục tiêu/goal.
+   - Giúp nâng tầm tinh thần đồng đội lên cao nhất và tạo kỷ niệm đáng nhớ.
+
+5. **💡 Bài học lãnh đạo rút ra (Captain's Lesson):**
+   - 3 lưu ý cốt lõi dành cho tôi để làm gương và chỉ huy đội tốt hơn trong tình huống này.
+
+Đầu ra viết bằng tiếng Việt, định dạng Markdown thật chuyên nghiệp và truyền cảm hứng.
+`;
+
+  try {
+    const result = await window.api.callAI({
+      provider: state.settings.apiProvider,
+      apiKey: state.settings.apiKey,
+      model: state.settings.aiModel,
+      prompt: detailedPrompt
+    });
+
+    if (result.success) {
+      const newItem = {
+        id: Date.now().toString(),
+        goal: goalVal,
+        style: styleVal,
+        teamDesc: teamDescVal,
+        content: result.text,
+        date: new Date().toLocaleString('vi-VN')
+      };
+
+      state.captainHistory.unshift(newItem);
+      activeCaptainHistoryId = newItem.id;
+      await saveData();
+      renderCaptainHistoryList();
+
+      outputContainer.innerHTML = parseMarkdownToHTML(result.text);
+      if (btnCopy) {
+        btnCopy.style.display = 'inline-flex';
+        btnCopy.onclick = () => {
+          navigator.clipboard.writeText(result.text);
+          showToast("Đã sao chép kịch bản phát ngôn đội trưởng!", "success");
+        };
+      }
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (err) {
+    console.error(err);
+    outputContainer.innerHTML = `
+      <div class="ai-empty-state">
+        <div class="ai-empty-icon" style="color: var(--accent-red)">
+          <svg viewBox="0 0 24 24" width="60" height="60" stroke="currentColor" stroke-width="1.5" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        </div>
+        <h3>Lỗi kết nối AI</h3>
+        <p>${err.message || "Không thể kết nối với máy chủ AI. Vui lòng cấu hình khóa API trong mục Cấu Hình."}</p>
+      </div>
+    `;
+  }
+}
+
+// ==========================================================================
+// PREDICTIVE FORESIGHT / TREND PREDICTION LOGIC
+// ==========================================================================
+let activeTrendHistoryId = null;
+
+function setupTrendPredictionEvents() {
+  const btnGenerate = document.getElementById('btn-generate-trend-prediction-ai');
+  const quickBtns = document.querySelectorAll('.trend-quick-btn');
+
+  if (btnGenerate) {
+    btnGenerate.addEventListener('click', generateTrendPredictionAI);
+  }
+
+  // Quick topics buttons
+  quickBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const topicText = btn.getAttribute('data-topic');
+      const textarea = document.getElementById('trend-topic');
+      if (textarea && topicText) {
+        textarea.value = topicText;
+      }
+    });
+  });
+
+  // Render initial list
+  renderTrendHistoryList();
+}
+
+function renderTrendPredictionTab() {
+  renderTrendHistoryList();
+  if (activeTrendHistoryId) {
+    selectTrendHistoryItem(activeTrendHistoryId);
+  } else {
+    showTrendEmptyState();
+  }
+}
+
+function showTrendEmptyState() {
+  const outputContainer = document.getElementById('trend-prediction-ai-output-container');
+  const btnCopy = document.getElementById('btn-copy-trend-prediction-ai');
+  if (outputContainer) {
+    outputContainer.innerHTML = `
+      <div class="ai-empty-state">
+        <div class="ai-empty-icon">
+          <svg viewBox="0 0 24 24" width="60" height="60" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        </div>
+        <h3>Dự đoán trước & Wow người xem</h3>
+        <p>Nhập kỹ năng/chủ đề ở cột trái. AI sẽ phân tích góc quay, dự đoán trước phản xạ vật lý, tư thế, vị trí rơi cầu và phản ứng của đối thủ để tạo ra một kịch bản content cực xịn, đảm bảo lên xu hướng và khiến người xem trầm trồ kinh ngạc.</p>
+      </div>
+    `;
+  }
+  if (btnCopy) btnCopy.style.display = 'none';
+}
+
+function renderTrendHistoryList() {
+  const container = document.getElementById('trend-history-container');
+  if (!container) return;
+
+  container.innerHTML = '';
+  if (!state.trendHistory || state.trendHistory.length === 0) {
+    container.innerHTML = '<p class="empty-msg" style="padding: 10px 0; color: var(--text-muted); font-size: 13px; text-align: center;">Chưa có kịch bản phản xạ nào.</p>';
+    return;
+  }
+
+  state.trendHistory.forEach(item => {
+    const div = document.createElement('div');
+    div.className = `prep-history-item ${activeTrendHistoryId === item.id ? 'active' : ''}`;
+    div.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.03); margin-bottom: 6px; cursor: pointer; border: 1px solid transparent; transition: all 0.2s;";
+    if (activeTrendHistoryId === item.id) {
+      div.style.background = "rgba(139, 92, 246, 0.1)";
+      div.style.borderColor = "rgba(139, 92, 246, 0.3)";
+    }
+
+    div.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 2px; overflow: hidden; flex-grow: 1; padding-right: 8px;">
+        <strong style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-color);">${item.topic}</strong>
+        <span style="font-size: 11px; color: var(--text-muted);">${item.date}</span>
+      </div>
+      <button type="button" class="btn-delete-trend-item" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1;">&times;</button>
+    `;
+
+    div.addEventListener('click', (e) => {
+      if (e.target.classList.contains('btn-delete-trend-item')) return;
+      selectTrendHistoryItem(item.id);
+    });
+
+    div.querySelector('.btn-delete-trend-item').addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteTrendHistoryItem(item.id);
+    });
+
+    container.appendChild(div);
+  });
+}
+
+function selectTrendHistoryItem(id) {
+  activeTrendHistoryId = id;
+  const item = state.trendHistory.find(t => t.id === id);
+  if (!item) return;
+
+  renderTrendHistoryList();
+
+  document.getElementById('trend-topic').value = item.topic;
+  document.getElementById('trend-platform').value = item.platform;
+
+  const outputContainer = document.getElementById('trend-prediction-ai-output-container');
+  const btnCopy = document.getElementById('btn-copy-trend-prediction-ai');
+
+  if (outputContainer) {
+    outputContainer.innerHTML = parseMarkdownToHTML(item.content);
+  }
+  if (btnCopy) {
+    btnCopy.style.display = 'inline-flex';
+    btnCopy.onclick = () => {
+      navigator.clipboard.writeText(item.content);
+      showToast("Đã sao chép kịch bản phản xạ trước!", "success");
+    };
+  }
+}
+
+async function deleteTrendHistoryItem(id) {
+  if (confirm("Bạn có chắc chắn muốn xóa lịch sử kịch bản này?")) {
+    state.trendHistory = state.trendHistory.filter(t => t.id !== id);
+    if (activeTrendHistoryId === id) {
+      activeTrendHistoryId = null;
+      showTrendEmptyState();
+    }
+    await saveData();
+    renderTrendHistoryList();
+  }
+}
+
+async function generateTrendPredictionAI() {
+  const topicVal = document.getElementById('trend-topic').value.trim();
+  const platformVal = document.getElementById('trend-platform').value;
+  const outputContainer = document.getElementById('trend-prediction-ai-output-container');
+  const btnCopy = document.getElementById('btn-copy-trend-prediction-ai');
+
+  if (!topicVal) {
+    showToast("Vui lòng nhập chủ đề hoặc kỹ năng!", "warning");
+    return;
+  }
+
+  if (!outputContainer) return;
+
+  outputContainer.innerHTML = `
+    <div class="ai-empty-state">
+      <div class="ai-empty-icon">
+        <svg class="spinner" viewBox="0 0 24 24" width="48" height="48" stroke="var(--accent-secondary)" stroke-width="3" fill="none" style="animation: spin 1s linear infinite;">
+          <circle cx="12" cy="12" r="10"></circle>
+        </svg>
+      </div>
+      <h3>AI đang phân tích góc máy, tính toán quỹ đạo vật lý và kết quả của skill xịn...</h3>
+      <p>Đang lập kịch bản content độc quyền "Phản Xạ Trước" để làm người xem trầm trồ kinh ngạc. Quá trình này mất khoảng 5 - 15 giây.</p>
+    </div>
+  `;
+  if (btnCopy) btnCopy.style.display = 'none';
+
+  const detailedPrompt = `
+Hãy đóng vai là một nhà sáng tạo nội dung triệu view xuất chúng, một bậc thầy marketing có khả năng "nhìn thấu tương lai" và hiểu rõ tâm lý người xem mạng xã hội Việt Nam. 
+Tôi muốn tạo một nội dung đột phá về chủ đề/kỹ năng sau:
+
+**Chủ đề hoặc Kỹ năng được nhập:**
+${topicVal}
+
+**Định dạng/Nền tảng mong muốn:**
+${platformVal}
+
+Hãy sáng tạo một kịch bản content mang tính chất **PHẢN XẠ TRƯỚC (Predictive Foresight / Outcomes of a great skill)** theo các nguyên tắc cốt lõi sau:
+1. **Dự đoán trước kết quả chính xác tuyệt đối (Predicting the exact outcome of a trick/action):**
+   - Viết phần nội dung mà người làm content dự đoán chính xác trước 100% kết quả vật lý, phản ứng, hoặc chuyển động của đối thủ/quả cầu khi thực hiện skill xịn này (Ví dụ: "Tôi biết trước khi tôi vung vợt chéo góc 45 độ sát lưới, quả cầu sẽ xoáy lật lưới 3 vòng, và chân trái đối thủ sẽ bị trượt sang phải 15cm do mất đà...").
+   - Sự dự đoán chính xác này sẽ khiến người xem cảm thấy "Wow" vì ta nắm rõ mọi kết quả vật lý/sinh lý của skill xịn trước cả khi nó diễn ra.
+2. **Nội dung chưa từng ai làm (Unexplored & Unique):**
+   - Đưa ra một góc nhìn sáng tạo độc nhất vô nhị, chưa có bất kỳ video hay bài viết nào trên mạng làm tương tự. Tránh các lối mòn hướng dẫn kỹ thuật thông thường.
+   - Thể hiện sự tinh tế, "độc lạ" trong cách kể chuyện.
+3. **Chắc chắn thắng (High-converting/Viral blueprint):**
+   - Thiết kế nhịp điệu (Hook giữ chân 3 giây đầu, Body cao trào chứng minh, và Outro kêu gọi hành động ấn tượng).
+   - Đảm bảo tỷ lệ giữ chân người xem cực cao.
+
+Hãy trả về kết quả bằng tiếng Việt, định dạng Markdown chuyên nghiệp gồm các mục sau:
+- ## 🚀 KHÁI NIỆM & GÓC NHÌN ĐỘC LẠ (Unexplored Angle)
+  *(Giải thích vì sao ý tưởng này chưa ai làm và tại sao nó chắc chắn sẽ tạo xu hướng)*
+- ## 🎯 DỰ ĐOÁN WOW-FACTOR (Predictive Outcome)
+  *(Mô tả chi tiết những kết quả vật lý, tư thế, vị trí hoặc phản ứng mà ta phán đoán trước chính xác 100% để người xem kinh ngạc)*
+- ## 🎬 CHI TIẾT KỊCH BẢN CONTENT (Detailed Content Script)
+  *(Nếu là video, chia rõ phân cảnh, góc máy quay, lời thoại/lời bình và phụ đề. Nếu là bài viết, chia rõ tiêu đề giật gân, thân bài lôi cuốn và lời kêu gọi)*
+- ## 💡 MẸO TRIỂN KHAI THỰC TẾ
+  *(Lưu ý về góc quay camera, ánh sáng, âm thanh hoặc đạo cụ để làm nổi bật kết quả dự đoán trước này)*
+`;
+
+  try {
+    const result = await window.api.callAI({
+      provider: state.settings.apiProvider,
+      apiKey: state.settings.apiKey,
+      model: state.settings.aiModel,
+      prompt: detailedPrompt
+    });
+
+    if (result.success) {
+      const newItem = {
+        id: Date.now().toString(),
+        topic: topicVal,
+        platform: platformVal,
+        content: result.text,
+        date: new Date().toLocaleString('vi-VN')
+      };
+
+      state.trendHistory.unshift(newItem);
+      activeTrendHistoryId = newItem.id;
+      await saveData();
+      renderTrendHistoryList();
+
+      outputContainer.innerHTML = parseMarkdownToHTML(result.text);
+      if (btnCopy) {
+        btnCopy.style.display = 'inline-flex';
+        btnCopy.onclick = () => {
+          navigator.clipboard.writeText(result.text);
+          showToast("Đã sao chép kịch bản phản xạ trước!", "success");
+        };
+      }
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (err) {
+    console.error(err);
+    outputContainer.innerHTML = `
+      <div class="ai-empty-state">
+        <div class="ai-empty-icon" style="color: var(--accent-red)">
+          <svg viewBox="0 0 24 24" width="60" height="60" stroke="currentColor" stroke-width="1.5" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        </div>
+        <h3>Lỗi kết nối AI</h3>
+        <p>${err.message || "Không thể kết nối với máy chủ AI. Vui lòng cấu hình khóa API trong mục Cấu Hình."}</p>
+      </div>
+    `;
   }
 }
 

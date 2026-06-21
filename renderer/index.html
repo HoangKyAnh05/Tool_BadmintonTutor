@@ -66,6 +66,28 @@
           </svg>
           <span>Ghi Nhớ & Link</span>
         </button>
+        <button class="nav-btn" data-tab="friends">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          <span>Bạn Bè AI</span>
+        </button>
+        <button class="nav-btn" data-tab="captain">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span>Luyện Đội Trưởng</span>
+        </button>
+        <button class="nav-btn" data-tab="trend-prediction">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+          <span>Phản Xạ Trước</span>
+        </button>
         <button class="nav-btn" data-tab="settings">
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           <span>Cấu Hình</span>
@@ -611,6 +633,207 @@
         </div>
       </section>
 
+      <!-- TAB Content: Friends Management & AI Suggestions -->
+      <section id="tab-friends" class="tab-pane">
+        <div class="ai-layout">
+          <!-- Left sidebar: Friends List & Controls -->
+          <div class="ai-control-panel" style="max-height: 100%; display: flex; flex-direction: column; gap: 15px; overflow: hidden;">
+            <h3>Quản lý Bạn bè</h3>
+            <p class="settings-desc">Quản lý danh sách bạn bè riêng biệt và tự động tạo gợi ý bắt đầu trò chuyện hàng loạt bằng AI.</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;">
+              <button class="btn btn-primary" id="btn-open-add-friend-modal" style="width: 100%;">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>Thêm Bạn Mới</span>
+              </button>
+              
+              <button class="btn btn-primary" id="btn-generate-friends-ai" style="width: 100%; background: linear-gradient(135deg, var(--accent-secondary), rgba(0, 240, 255, 0.8)); color: #000; border: none;">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <span>AI Gợi Ý Hỏi Thăm (Tất cả)</span>
+              </button>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 5px 0; flex-shrink: 0;">
+            
+            <div class="search-box" style="width: 100%; height: 38px; margin-bottom: 5px; padding: 0 10px; flex-shrink: 0;">
+              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" id="friend-search-input" placeholder="Tìm bạn bè..." style="font-size: 13px;">
+            </div>
+
+            <div id="friends-list-container" style="flex: 1 1 50%; min-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px;">
+              <!-- Filled dynamically -->
+            </div>
+
+            <div class="friends-history-panel" style="margin-top: 10px; display: flex; flex-direction: column; flex: 1 1 40%; min-height: 120px; overflow: hidden;">
+              <h3 style="font-size: 13px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; border-top: 1px solid var(--border-color); padding-top: 12px; flex-shrink: 0;">Lịch sử Gợi Ý</h3>
+              <div class="friends-history-list" id="friends-history-container" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
+                <!-- Injected dynamically -->
+              </div>
+            </div>
+          </div>
+          
+          <!-- Right output panel: AI Suggestions -->
+          <div class="ai-output-panel">
+            <div class="panel-header">
+              <h3>Gợi Ý Hội Thoại Từ AI</h3>
+              <div class="header-actions">
+                <button class="btn btn-secondary btn-sm" id="btn-copy-friends-ai" style="display: none;">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span>Sao chép toàn bộ</span>
+                </button>
+              </div>
+            </div>
+            
+            <div class="ai-output-content" id="friends-ai-output-container">
+              <div class="ai-empty-state">
+                <div class="ai-empty-icon">
+                  <svg viewBox="0 0 24 24" width="60" height="60" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                </div>
+                <h3>Gợi ý trò chuyện thông minh</h3>
+                <p>Thêm bạn bè và nhập đặc điểm của họ ở danh sách bên trái. Bấm nút "AI Gợi Ý Hỏi Thăm (Tất cả)" để hệ thống sinh ra mỗi người 10 câu hỏi thăm/chuyện trò dựa trên sở thích cá nhân kết hợp các hot trend hiện tại.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB Content: Captain Simulator -->
+      <section id="tab-captain" class="tab-pane">
+        <div class="ai-layout">
+          <!-- Left sidebar: Inputs -->
+          <div class="ai-control-panel" style="overflow-y: auto; gap: 15px;">
+            <h3>Tập Làm Đội Trưởng AI</h3>
+            <p class="settings-desc">Nhập tình huống và mục tiêu của đội để AI thiết kế cho bạn kịch bản phát ngôn, chỉ đạo chiến thuật và hô khẩu hiệu ăn mừng của một người đội trưởng thực thụ.</p>
+            
+            <div class="form-group">
+              <label for="captain-goal">Tình huống & Mục tiêu của Đội <span class="required">*</span></label>
+              <textarea id="captain-goal" rows="4" class="form-control" placeholder="Ví dụ: Đội cầu lông chuẩn bị thi đấu trận chung kết giải CLB phong trào, tinh thần cả đội đang hơi căng thẳng và lo lắng..."></textarea>
+              <div class="prep-quick-prompts" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
+                <button type="button" class="btn btn-secondary btn-sm captain-quick-btn" data-goal="Đội cầu lông chuẩn bị thi đấu trận chung kết giải CLB phong trào, tinh thần cả đội đang hơi căng thẳng và lo lắng. Cần làm sao để đội tự tin nhất.">Chung kết cầu lông</button>
+                <button type="button" class="btn btn-secondary btn-sm captain-quick-btn" data-goal="Nhóm làm việc đang bị trễ deadline 2 ngày cho một dự án lớn, mọi người đều mệt mỏi và chán nản. Cần đốc thúc để hoàn thành xuất sắc.">Dự án trễ deadline</button>
+                <button type="button" class="btn btn-secondary btn-sm captain-quick-btn" data-goal="Đội bóng đá mini của công ty chuẩn bị đá hiệp 2, đang bị đối thủ dẫn trước 2-0. Các thành viên có dấu hiệu đổ lỗi cho nhau.">Hiệp 2 bị dẫn bàn</button>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="captain-style">Phong cách Đội Trưởng</label>
+              <select id="captain-style" class="form-control">
+                <option value="Truyền cảm hứng & Nhiệt huyết">Truyền cảm hứng & Nhiệt huyết (Inspirational)</option>
+                <option value="Kỷ luật, Quyết đoán & Chiến thuật">Kỷ luật, Quyết đoán & Chiến thuật (Authoritative)</option>
+                <option value="Thân thiện, Thấu hiểu & Kết nối">Thân thiện, Thấu hiểu & Kết nối (Empathetic)</option>
+                <option value="Hài hước, Giải tỏa áp lực & Hăng hái">Hài hước, Giải tỏa áp lực (Humorous)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="captain-team-desc">Đặc điểm của Đội (Thành viên)</label>
+              <input type="text" id="captain-team-desc" class="form-control" placeholder="Ví dụ: Đội trẻ tuổi, năng nổ nhưng dễ nản..." value="Thành viên trẻ tuổi, nhiệt huyết nhưng chưa có nhiều kinh nghiệm thực chiến.">
+            </div>
+
+            <button class="btn btn-primary btn-block" id="btn-generate-captain-ai" style="background: linear-gradient(135deg, #a855f7, #6366f1); color: #fff; border: none;">
+              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              <span>Sinh Thoại Đội Trưởng AI</span>
+            </button>
+
+            <div class="captain-history-panel" style="margin-top: 15px; display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; min-height: 200px;">
+              <h3 style="font-size: 13px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; border-top: 1px solid var(--border-color); padding-top: 15px;">Lịch sử Đội Trưởng</h3>
+              <div class="captain-history-list" id="captain-history-container" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
+                <!-- Injected dynamically -->
+              </div>
+            </div>
+          </div>
+          
+          <!-- Right output panel -->
+          <div class="ai-output-panel">
+            <div class="panel-header">
+              <h3>Kịch Bản Phát Ngôn Đội Trưởng</h3>
+              <div class="header-actions">
+                <button class="btn btn-secondary btn-sm" id="btn-copy-captain-ai" style="display: none;">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span>Sao chép kịch bản</span>
+                </button>
+              </div>
+            </div>
+            
+            <div class="ai-output-content" id="captain-ai-output-container">
+              <div class="ai-empty-state">
+                <div class="ai-empty-icon">
+                  <svg viewBox="0 0 24 24" width="60" height="60" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                </div>
+                <h3>Trở thành Đội Trưởng tài ba</h3>
+                <p>Nhập tình huống của đội ở bảng bên trái. AI sẽ phân tích và lập tức tạo ra toàn bộ thoại hội ý, lời thúc giục, phương pháp lãnh đạo và các khẩu hiệu chiến thắng kiêu hãnh hô to khi đạt goal để bạn luyện tập.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB Content: Phản Xạ Trước AI -->
+      <section id="tab-trend-prediction" class="tab-pane">
+        <div class="ai-layout">
+          <!-- Left sidebar: Inputs -->
+          <div class="ai-control-panel" style="overflow-y: auto; gap: 15px;">
+            <h3>Phản Xạ Trước AI</h3>
+            <p class="settings-desc">Nhập chủ đề/kỹ năng bất kỳ. AI sẽ lập tức sáng tạo một kịch bản content độc nhất chưa ai làm, dự đoán trước kết quả chính xác của một kỹ năng xịn để làm người xem kinh ngạc (Wow factor).</p>
+            
+            <div class="form-group">
+              <label for="trend-topic">Chủ đề hoặc Kỹ năng <span class="required">*</span></label>
+              <textarea id="trend-topic" rows="4" class="form-control" placeholder="Ví dụ: Kỹ thuật đập cầu cắm chéo sân giống Fu Haifeng, hoặc Mẹo phán đoán hướng giao cầu của đối thủ..."></textarea>
+              <div class="prep-quick-prompts" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
+                <button type="button" class="btn btn-secondary btn-sm trend-quick-btn" data-topic="Cú nhảy đập cầu cắm sấp mặt của Lee Chong Wei (Predicting opponent ankle breaking)">Đập cầu Lee Chong Wei</button>
+                <button type="button" class="btn btn-secondary btn-sm trend-quick-btn" data-topic="Kỹ thuật bỏ nhỏ sát lưới siêu ảo của Tai Tzu Ying (Predicting net spin direction)">Bỏ nhỏ Tai Tzu Ying</button>
+                <button type="button" class="btn btn-secondary btn-sm trend-quick-btn" data-topic="Cách né cú đập cầu của đối thủ và phản công ngược bằng ve trái tay (Backhand defense counter-attack prediction)">Phản công ve trái tay</button>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="trend-platform">Định dạng & Nền tảng</label>
+              <select id="trend-platform" class="form-control">
+                <option value="Kịch bản video ngắn (TikTok/Reels/Shorts)">Video Ngắn (TikTok/Reels)</option>
+                <option value="Bài viết phân tích chuyên sâu (Facebook/Blog)">Bài viết chuyên sâu (Facebook)</option>
+                <option value="Kịch bản video dài chi tiết (YouTube)">Kịch bản video dài (YouTube)</option>
+                <option value="Giáo án huấn luyện độc lạ (On-court Coaching)">Kịch bản dạy học thực tế</option>
+              </select>
+            </div>
+
+            <button class="btn btn-primary btn-block" id="btn-generate-trend-prediction-ai" style="background: linear-gradient(135deg, var(--accent-secondary), #8b5cf6); color: #000; border: none; font-weight: bold;">
+              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              <span>Sinh Kịch Bản Phản Xạ Trước</span>
+            </button>
+
+            <div class="trend-history-panel" style="margin-top: 15px; display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; min-height: 200px;">
+              <h3 style="font-size: 13px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; border-top: 1px solid var(--border-color); padding-top: 15px;">Lịch sử Phản Xạ Trước</h3>
+              <div class="trend-history-list" id="trend-history-container" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
+                <!-- Injected dynamically -->
+              </div>
+            </div>
+          </div>
+          
+          <!-- Right output panel -->
+          <div class="ai-output-panel">
+            <div class="panel-header">
+              <h3>Kịch Bản Content & Dự Đoán Win</h3>
+              <div class="header-actions">
+                <button class="btn btn-secondary btn-sm" id="btn-copy-trend-prediction-ai" style="display: none;">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span>Sao chép toàn bộ</span>
+                </button>
+              </div>
+            </div>
+            
+            <div class="ai-output-content" id="trend-prediction-ai-output-container">
+              <div class="ai-empty-state">
+                <div class="ai-empty-icon">
+                  <svg viewBox="0 0 24 24" width="60" height="60" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </div>
+                <h3>Dự đoán trước & Wow người xem</h3>
+                <p>Nhập kỹ năng/chủ đề ở cột trái. AI sẽ phân tích góc quay, dự đoán trước phản xạ vật lý, tư thế, vị trí rơi cầu và phản ứng của đối thủ để tạo ra một kịch bản content cực xịn, đảm bảo lên xu hướng và khiến người xem trầm trồ kinh ngạc.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- TAB Content: Settings -->
       <section id="tab-settings" class="tab-pane">
         <div class="settings-layout">
@@ -794,6 +1017,49 @@ git push -u origin main</code></pre>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="btn-cancel-student">Hủy</button>
         <button class="btn btn-primary" id="btn-save-student">Lưu Thông Tin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Add/Edit Friend -->
+  <div class="modal-backdrop" id="friend-modal" style="display: none;">
+    <div class="modal-card" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 id="friend-modal-title">Thêm Bạn Mới</h3>
+        <button class="modal-close-btn" id="btn-close-friend-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="friend-form">
+          <input type="hidden" id="friend-id">
+          
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="friend-name">Tên bạn bè <span class="required">*</span></label>
+              <input type="text" id="friend-name" class="form-control" required placeholder="Nguyễn Văn B">
+            </div>
+            <div class="form-group col-6">
+              <label for="friend-gender">Giới tính</label>
+              <select id="friend-gender" class="form-control">
+                <option value="Nam">Nam</option>
+                <option value="Nữ">Nữ</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="friend-phone">Số điện thoại / Liên lạc</label>
+            <input type="text" id="friend-phone" class="form-control" placeholder="SĐT, Zalo, FB...">
+          </div>
+
+          <div class="form-group">
+            <label for="friend-characteristics">Đặc điểm / Sở thích / Tính cách <span class="required">*</span></label>
+            <textarea id="friend-characteristics" rows="4" class="form-control" required placeholder="Ví dụ: Thích đập cầu công, sợ vợ, thích đi nhậu cuối tuần, hay xem Tiktok trend bóng đá, hướng nội..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-friend">Hủy</button>
+        <button class="btn btn-primary" id="btn-save-friend">Lưu Bạn Bè</button>
       </div>
     </div>
   </div>
