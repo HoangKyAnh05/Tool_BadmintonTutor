@@ -217,8 +217,10 @@ const aiStudentSelect = document.getElementById('ai-student-select');
 const aiStudentMiniProfile = document.getElementById('ai-student-mini-profile');
 const btnGenerateAI = document.getElementById('btn-generate-ai');
 const btnCopyAIOutput = document.getElementById('btn-copy-ai-output');
+const btnSaveAiOutput = document.getElementById('btn-save-ai-output');
 const aiOutputContainer = document.getElementById('ai-output-container');
 const aiCustomPrompt = document.getElementById('ai-custom-prompt');
+const aiHistoryContainer = document.getElementById('ai-history-container');
 
 // Settings Elements
 const settingsApiProvider = document.getElementById('settings-api-provider');
@@ -317,6 +319,7 @@ async function loadData() {
   if (!state.coachAvailability) state.coachAvailability = {};
   if (!state.students) state.students = [];
   if (!state.preparedLessons) state.preparedLessons = [];
+  if (!state.aiLessonHistory) state.aiLessonHistory = [];
   if (!state.quickNotes) state.quickNotes = [];
   if (!state.friends) state.friends = [];
   if (!state.captainHistory) state.captainHistory = [];
@@ -1269,6 +1272,9 @@ function setupOptimizerEvents() {
 }
 
 // --- AI ASSISTANT TAB ---
+let currentAiResult = null;
+let activeAiHistoryId = null;
+
 function renderAIAssistantTab() {
   // Populate student selector
   aiStudentSelect.innerHTML = '<option value="">-- Chọn học viên --</option>';
@@ -1281,6 +1287,13 @@ function renderAIAssistantTab() {
   });
 
   aiStudentMiniProfile.style.display = 'none';
+  renderAiHistoryList();
+  if (!activeAiHistoryId) {
+    showAiEmptyState();
+  }
+}
+
+function showAiEmptyState() {
   aiOutputContainer.innerHTML = `
     <div class="ai-empty-state">
       <div class="ai-empty-icon">
@@ -1291,6 +1304,109 @@ function renderAIAssistantTab() {
     </div>
   `;
   btnCopyAIOutput.style.display = 'none';
+  btnSaveAiOutput.style.display = 'none';
+}
+
+function renderAiHistoryList() {
+  aiHistoryContainer.innerHTML = '';
+  if (!state.aiLessonHistory || state.aiLessonHistory.length === 0) {
+    aiHistoryContainer.innerHTML = '<p class="empty-msg" style="padding: 10px 0; color: var(--text-muted); font-size: 13px; text-align: center;">Chưa có giáo án nào được lưu.</p>';
+    return;
+  }
+
+  // Sort descending by ID/timestamp
+  const sortedHistory = [...state.aiLessonHistory].sort((a, b) => b.id.localeCompare(a.id));
+
+  sortedHistory.forEach(item => {
+    const div = document.createElement('div');
+    div.className = `ai-history-item ${activeAiHistoryId === item.id ? 'active' : ''}`;
+    
+    let typeLabel = "Bài tập 90p";
+    if (item.aiType === '1month') typeLabel = "Giáo án 1 tháng";
+    else if (item.aiType === 'teambuilding') typeLabel = "Teambuilding";
+
+    div.innerHTML = `
+      <div class="ai-history-info">
+        <strong>${item.studentName} - ${typeLabel}</strong>
+        <span>${item.date}</span>
+      </div>
+      <div class="ai-history-actions">
+        <button type="button" class="btn-delete-ai-history" title="Xóa">&times;</button>
+      </div>
+    `;
+
+    // Click to load
+    div.addEventListener('click', (e) => {
+      if (e.target.classList.contains('btn-delete-ai-history')) return;
+      selectAiHistoryItem(item.id);
+    });
+
+    // Click to delete
+    div.querySelector('.btn-delete-ai-history').addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteAiHistoryItem(item.id);
+    });
+
+    aiHistoryContainer.appendChild(div);
+  });
+}
+
+function selectAiHistoryItem(id) {
+  activeAiHistoryId = id;
+  const item = state.aiLessonHistory.find(p => p.id === id);
+  if (!item) return;
+
+  // Refresh list to update active styling
+  renderAiHistoryList();
+
+  // Fill inputs
+  aiStudentSelect.value = item.studentId;
+  
+  // Trigger student select change to show mini profile
+  const changeEvent = new Event('change');
+  aiStudentSelect.dispatchEvent(changeEvent);
+
+  // Set radio option for ai type
+  const radio = document.querySelector(`input[name="ai-type"][value="${item.aiType}"]`);
+  if (radio) radio.checked = true;
+
+  // Set custom prompt
+  aiCustomPrompt.value = item.customRequest || '';
+
+  // Render contents
+  aiOutputContainer.innerHTML = parseMarkdownToHTML(item.content);
+
+  // Show actions
+  currentAiResult = {
+    studentId: item.studentId,
+    studentName: item.studentName,
+    aiType: item.aiType,
+    customRequest: item.customRequest,
+    content: item.content
+  };
+
+  btnCopyAIOutput.style.display = 'inline-flex';
+  btnSaveAiOutput.style.display = 'none'; // Already saved
+
+  // Bind copy
+  btnCopyAIOutput.onclick = () => {
+    navigator.clipboard.writeText(item.content);
+    showToast("Đã sao chép nội dung giáo án vào Clipboard!", "success");
+  };
+}
+
+async function deleteAiHistoryItem(id) {
+  if (confirm("Bạn có chắc chắn muốn xóa giáo án lịch sử này?")) {
+    state.aiLessonHistory = state.aiLessonHistory.filter(p => p.id !== id);
+    if (activeAiHistoryId === id) {
+      activeAiHistoryId = null;
+      currentAiResult = null;
+      showAiEmptyState();
+    }
+    await saveData();
+    showToast("Đã xóa giáo án khỏi lịch sử.", "info");
+    renderAiHistoryList();
+  }
 }
 
 function setupAIEvents() {
@@ -1311,6 +1427,26 @@ function setupAIEvents() {
       <p><strong>Đặc điểm khác:</strong> ${st.highlights || 'Chưa cập nhật'}</p>
     `;
     aiStudentMiniProfile.style.display = 'block';
+  });
+
+  btnSaveAiOutput.addEventListener('click', async () => {
+    if (!currentAiResult) return;
+    const newLesson = {
+      id: Date.now().toString(),
+      studentId: currentAiResult.studentId,
+      studentName: currentAiResult.studentName,
+      aiType: currentAiResult.aiType,
+      customRequest: currentAiResult.customRequest,
+      content: currentAiResult.content,
+      date: new Date().toLocaleString('vi-VN')
+    };
+    if (!state.aiLessonHistory) state.aiLessonHistory = [];
+    state.aiLessonHistory.push(newLesson);
+    activeAiHistoryId = newLesson.id;
+    await saveData();
+    showToast("Đã lưu giáo án vào lịch sử thành công!", "success");
+    renderAiHistoryList();
+    btnSaveAiOutput.style.display = 'none'; // Saved, hide save button
   });
 
   btnGenerateAI.addEventListener('click', async () => {
@@ -1411,6 +1547,10 @@ ${customRequest ? `- Yêu cầu thêm: ${customRequest}` : ''}
       </div>
     `;
     btnCopyAIOutput.style.display = 'none';
+    btnSaveAiOutput.style.display = 'none';
+    activeAiHistoryId = null;
+    currentAiResult = null;
+    renderAiHistoryList();
 
     // Add CSS spinner animation dynamically
     if (!document.getElementById('spinner-style')) {
@@ -1436,6 +1576,15 @@ ${customRequest ? `- Yêu cầu thêm: ${customRequest}` : ''}
         // Render generated text formatted as HTML Markdown
         aiOutputContainer.innerHTML = parseMarkdownToHTML(result.text);
         btnCopyAIOutput.style.display = 'inline-flex';
+        btnSaveAiOutput.style.display = 'inline-flex';
+
+        currentAiResult = {
+          studentId: studentId,
+          studentName: st.name,
+          aiType: aiType,
+          customRequest: customRequest,
+          content: result.text
+        };
 
         // Copy event listener configuration
         btnCopyAIOutput.onclick = () => {

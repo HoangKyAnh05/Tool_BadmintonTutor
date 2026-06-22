@@ -2526,4 +2526,76 @@ textarea.form-control {
   color: var(--text-secondary);
 }
 
+/* AI Assistant Lesson Plan History styling */
+.ai-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  flex-grow: 1;
+  margin-top: 10px;
+}
 
+.ai-history-item {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ai-history-item:hover, .ai-history-item.active {
+  border-color: var(--accent-secondary);
+}
+
+.ai-history-item.active {
+  background: linear-gradient(90deg, rgba(0, 240, 255, 0.08) 0%, rgba(57, 255, 20, 0.02) 100%);
+  box-shadow: 0 4px 12px rgba(0, 240, 255, 0.05);
+}
+
+.ai-history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-grow: 1;
+  overflow: hidden;
+  text-align: left;
+}
+
+.ai-history-info strong {
+  font-size: 13.5px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai-history-info span {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.ai-history-actions {
+  display: flex;
+  align-items: center;
+}
+
+.btn-delete-ai-history {
+  background: none;
+  border: none;
+  color: var(--accent-red);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity var(--transition-fast);
+}
+
+.btn-delete-ai-history:hover {
+  opacity: 1;
+}

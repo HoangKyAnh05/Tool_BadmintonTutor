@@ -19,7 +19,8 @@ const DEFAULT_DATA = {
   captainHistory: [],
   trendHistory: [],
   friendsHistory: [],
-  friendsAiOutput: ""
+  friendsAiOutput: "",
+  aiLessonHistory: []
 };
 
 function createWindow() {
