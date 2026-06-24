@@ -217,6 +217,7 @@ const aiStudentSelect = document.getElementById('ai-student-select');
 const aiStudentMiniProfile = document.getElementById('ai-student-mini-profile');
 const btnGenerateAI = document.getElementById('btn-generate-ai');
 const btnCopyAIOutput = document.getElementById('btn-copy-ai-output');
+const btnCondenseAiOutput = document.getElementById('btn-condense-ai-output');
 const btnSaveAiOutput = document.getElementById('btn-save-ai-output');
 const aiOutputContainer = document.getElementById('ai-output-container');
 const aiCustomPrompt = document.getElementById('ai-custom-prompt');
@@ -298,6 +299,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupFriendsEvents();
   setupCaptainEvents();
   setupTrendPredictionEvents();
+
+  setupGlobalChat();
 
   // Render initial tab
   renderDashboard();
@@ -1304,6 +1307,7 @@ function showAiEmptyState() {
     </div>
   `;
   btnCopyAIOutput.style.display = 'none';
+  btnCondenseAiOutput.style.display = 'none';
   btnSaveAiOutput.style.display = 'none';
 }
 
@@ -1386,6 +1390,7 @@ function selectAiHistoryItem(id) {
   };
 
   btnCopyAIOutput.style.display = 'inline-flex';
+  btnCondenseAiOutput.style.display = 'inline-flex';
   btnSaveAiOutput.style.display = 'none'; // Already saved
 
   // Bind copy
@@ -1447,6 +1452,82 @@ function setupAIEvents() {
     showToast("Đã lưu giáo án vào lịch sử thành công!", "success");
     renderAiHistoryList();
     btnSaveAiOutput.style.display = 'none'; // Saved, hide save button
+  });
+
+  btnCondenseAiOutput.addEventListener('click', async () => {
+    if (!currentAiResult || !currentAiResult.content) return;
+
+    // Show loading state for condensing
+    aiOutputContainer.innerHTML = `
+      <div class="ai-empty-state">
+        <div class="ai-empty-icon">
+          <svg class="spinner" viewBox="0 0 24 24" width="48" height="48" stroke="var(--accent-secondary)" stroke-width="3" fill="none" style="animation: spin 1s linear infinite;">
+            <circle cx="12" cy="12" r="10"></circle>
+          </svg>
+        </div>
+        <h3>Đang cô đọng nội dung giáo án...</h3>
+        <p>Hệ thống AI đang rút gọn giáo án, chỉ giữ lại tiêu đề và các ý chính. Vui lòng chờ trong giây lát.</p>
+      </div>
+    `;
+    btnCopyAIOutput.style.display = 'none';
+    btnSaveAiOutput.style.display = 'none';
+    btnCondenseAiOutput.style.display = 'none';
+
+    const summarizePrompt = `
+Hãy đóng vai là một Huấn luyện viên/Giáo viên Cầu lông chuyên nghiệp hàng đầu. Hãy cô đọng lại nội dung giáo án/lộ trình/team building dưới đây thành một bản tóm tắt cực kỳ ngắn gọn, súc tích.
+
+**Yêu cầu cô đọng:**
+1. Chỉ giữ lại tiêu đề, các giai đoạn/phần chính và các ý chính (bullet points) cực kỳ ngắn gọn.
+2. Lược bỏ hoàn toàn các câu giải thích dài dòng, lý thuyết chung chung, hay lời khuyên chi tiết rườm rà.
+3. Tập trung làm nổi bật: Tên bài tập/hoạt động, thời gian/khối lượng (set/rep nếu có) và mục tiêu cốt lõi.
+4. Giữ nguyên cấu trúc/phân loại của bài gốc (ví dụ: các phần của bài 90 phút, hoặc các tuần của bài 1 tháng, hoặc danh sách 3 trò chơi).
+
+Đầu ra viết bằng tiếng Việt, định dạng Markdown đẹp mắt, rõ ràng và cô đọng nhất có thể.
+
+**Nội dung cần cô đọng:**
+${currentAiResult.content}
+`;
+
+    try {
+      const result = await window.api.callAI({
+        provider: state.settings.apiProvider,
+        apiKey: state.settings.apiKey,
+        model: state.settings.aiModel,
+        prompt: summarizePrompt
+      });
+
+      if (result.success) {
+        // Update content
+        aiOutputContainer.innerHTML = parseMarkdownToHTML(result.text);
+        
+        // Update state
+        currentAiResult.content = result.text;
+        
+        // Show buttons
+        btnCopyAIOutput.style.display = 'inline-flex';
+        btnSaveAiOutput.style.display = 'inline-flex'; // Show save button so they can save this condensed version
+        btnCondenseAiOutput.style.display = 'inline-flex';
+
+        // Re-bind copy with new text
+        btnCopyAIOutput.onclick = () => {
+          navigator.clipboard.writeText(result.text);
+          showToast("Đã sao chép nội dung giáo án cô đọng vào Clipboard!", "success");
+        };
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Lỗi khi cô đọng giáo án: " + err.message, "error");
+      
+      // Restore previous state
+      aiOutputContainer.innerHTML = parseMarkdownToHTML(currentAiResult.content);
+      btnCopyAIOutput.style.display = 'inline-flex';
+      btnCondenseAiOutput.style.display = 'inline-flex';
+      
+      const isSaved = state.aiLessonHistory && state.aiLessonHistory.some(item => item.id === activeAiHistoryId);
+      btnSaveAiOutput.style.display = isSaved ? 'none' : 'inline-flex';
+    }
   });
 
   btnGenerateAI.addEventListener('click', async () => {
@@ -1547,6 +1628,7 @@ ${customRequest ? `- Yêu cầu thêm: ${customRequest}` : ''}
       </div>
     `;
     btnCopyAIOutput.style.display = 'none';
+    btnCondenseAiOutput.style.display = 'none';
     btnSaveAiOutput.style.display = 'none';
     activeAiHistoryId = null;
     currentAiResult = null;
@@ -1576,6 +1658,7 @@ ${customRequest ? `- Yêu cầu thêm: ${customRequest}` : ''}
         // Render generated text formatted as HTML Markdown
         aiOutputContainer.innerHTML = parseMarkdownToHTML(result.text);
         btnCopyAIOutput.style.display = 'inline-flex';
+        btnCondenseAiOutput.style.display = 'inline-flex';
         btnSaveAiOutput.style.display = 'inline-flex';
 
         currentAiResult = {
@@ -4227,6 +4310,573 @@ Hãy trả về kết quả bằng tiếng Việt, định dạng Markdown chuy�
       </div>
     `;
   }
+}
+
+// ==========================================================================
+// GLOBAL CHAT & COMMAND CENTER LOGIC
+// ==========================================================================
+function setupGlobalChat() {
+  const trigger = document.getElementById('global-chat-trigger');
+  const windowEl = document.getElementById('global-chat-window');
+  const closeBtn = document.getElementById('btn-close-global-chat');
+  const chatBody = document.getElementById('global-chat-body');
+  const chatInput = document.getElementById('global-chat-input');
+  const sendBtn = document.getElementById('btn-send-global-chat');
+
+  if (!trigger || !windowEl) return;
+
+  trigger.addEventListener('click', () => {
+    const isOpen = windowEl.style.display !== 'none';
+    if (isOpen) {
+      windowEl.style.display = 'none';
+    } else {
+      windowEl.style.display = 'flex';
+      const pulseBadge = trigger.querySelector('.chat-badge-pulse');
+      if (pulseBadge) pulseBadge.style.display = 'none';
+      chatInput.focus();
+    }
+  });
+
+  closeBtn.addEventListener('click', () => {
+    windowEl.style.display = 'none';
+  });
+
+  // Example prompts click
+  document.querySelectorAll('.chat-example-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const text = item.getAttribute('data-text');
+      chatInput.value = text;
+      chatInput.focus();
+    });
+  });
+
+  function appendMessage(sender, text, isHtml = false) {
+    const div = document.createElement('div');
+    div.className = `chat-msg ${sender}`;
+    if (isHtml) {
+      div.innerHTML = text;
+    } else {
+      div.innerText = text;
+    }
+    chatBody.appendChild(div);
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }
+
+  async function handleSend() {
+    const query = chatInput.value.trim();
+    if (!query) return;
+
+    appendMessage('user', query);
+    chatInput.value = '';
+
+    // Show system loader message
+    const loaderId = 'chat-loader-' + Date.now();
+    const loaderDiv = document.createElement('div');
+    loaderDiv.className = 'chat-msg ai';
+    loaderDiv.id = loaderId;
+    loaderDiv.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <svg class="spinner" viewBox="0 0 24 24" width="16" height="16" stroke="var(--accent-secondary)" stroke-width="3" fill="none" style="animation: spin 1s linear infinite;">
+          <circle cx="12" cy="12" r="10"></circle>
+        </svg>
+        <span>Đang xử lý yêu cầu...</span>
+      </div>
+    `;
+    chatBody.appendChild(loaderDiv);
+    chatBody.scrollTop = chatBody.scrollHeight;
+
+    try {
+      const response = await processChatCommand(query);
+      
+      // Remove loader
+      const loader = document.getElementById(loaderId);
+      if (loader) loader.remove();
+
+      if (response && response.reply) {
+        appendMessage('ai', response.reply, true);
+      }
+
+      if (response && response.feedback) {
+        appendMessage('system-feedback', response.feedback, true);
+      }
+    } catch (err) {
+      console.error(err);
+      const loader = document.getElementById(loaderId);
+      if (loader) loader.remove();
+      appendMessage('ai', "Đã xảy ra lỗi khi kết nối với AI hoặc thực thi lệnh: " + err.message);
+    }
+  }
+
+  sendBtn.addEventListener('click', handleSend);
+  chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      handleSend();
+    }
+  });
+}
+
+function findStudentFuzzy(name) {
+  if (!name) return null;
+  const cleanName = name.toLowerCase().trim();
+  
+  // Try exact match
+  let match = state.students.find(s => s.name.toLowerCase().trim() === cleanName);
+  if (match) return match;
+  
+  // Try includes match
+  match = state.students.find(s => s.name.toLowerCase().includes(cleanName) || cleanName.includes(s.name.toLowerCase()));
+  if (match) return match;
+  
+  // Try word-by-word intersection match
+  const words = cleanName.split(/\s+/);
+  match = state.students.find(s => {
+    const sWords = s.name.toLowerCase().split(/\s+/);
+    return words.every(w => sWords.some(sw => sw.includes(w) || w.includes(sw)));
+  });
+  return match || null;
+}
+
+function switchTabProgrammatically(tab) {
+  const btn = Array.from(navButtons).find(b => b.getAttribute('data-tab') === tab);
+  if (btn) {
+    btn.click();
+    return true;
+  }
+  return false;
+}
+
+async function processChatCommand(query) {
+  let geminiFailed = false;
+  let geminiErrorMsg = "";
+
+  if (!state.settings.apiKey) {
+    geminiFailed = true;
+    geminiErrorMsg = "API Key trống";
+  } else {
+    try {
+      const systemPrompt = `
+Hãy đóng vai là Trợ lý Điều khiển AI thông minh của ứng dụng quản lý dạy học cầu lông "Badminton Coach Assistant".
+Bạn có nhiệm vụ phân tích tin nhắn tự nhiên của huấn luyện viên (người dùng) và chuyển đổi nó thành danh sách các hành động điều khiển ứng dụng dạng JSON.
+
+**Danh sách học viên hiện tại trong hệ thống:**
+${JSON.stringify(state.students.map(s => ({ id: s.id, name: s.name, gender: s.gender, paid: s.paid, totalSessions: s.totalSessions, usedSessions: s.usedSessions, unexcusedAbsences: s.unexcusedAbsences })))}
+
+**Đầu ra bắt buộc:**
+Bạn CHỈ được phép trả về định dạng JSON thuần túy, không có thẻ Codeblock markdown (\`\`\`json ... \`\`\`), không có bất kỳ văn bản giải thích nào ngoài JSON. Cấu trúc JSON phải là:
+{
+  "reply": "Lời hồi đáp thân thiện bằng tiếng Việt, thông báo những việc bạn sẽ thực hiện.",
+  "actions": [
+     // Mảng các hành động cần thực thi (có thể chứa 1 hoặc nhiều hành động)
+  ]
+}
+
+**Các loại hành động (actions) được hỗ trợ:**
+1. Chuyển tab:
+   {"type": "switch_tab", "tab": "dashboard" | "students" | "schedules" | "timetable" | "optimizer" | "ai-assistant" | "lesson-prep" | "quick-notes" | "settings"}
+   
+2. Thêm học viên mới:
+   {"type": "add_student", "name": "Tên học viên", "gender": "Nam" | "Nữ" (mặc định Nam), "phone": "SĐT", "tuition": Số_tiền (mặc định 1000000), "strengths": "Điểm mạnh", "weaknesses": "Điểm yếu", "highlights": "Đặc điểm khác"}
+   
+3. Cập nhật thông tin học viên (học phí, buổi học, chuyên cần, kịch bản, đặc điểm):
+   {"type": "update_student", "name": "Tên học viên cần cập nhật", "paid_add": Số_tiền_đóng_thêm_nếu_có, "sessions_add": Số_buổi_học_thêm_nếu_có (ví dụ: "học thêm 1 buổi"), "sessions_set": Số_buổi_đã_học_nếu_có (ví dụ: "học được 7 buổi"), "absences_add": Số_buổi_vắng_không_phép_thêm_nếu_có, "strengths": "Điểm mạnh mới", "weaknesses": "Điểm yếu mới", "highlights": "Đặc điểm mới"}
+   
+4. Sinh giáo án AI:
+   {"type": "generate_lesson", "name": "Tên học viên", "aiType": "90min" | "1month" | "teambuilding", "customRequest": "Yêu cầu bổ sung"}
+   
+5. Thêm ghi nhớ/ghi chú nhanh:
+   {"type": "add_quick_note", "title": "Tiêu đề ghi nhớ", "content": "Nội dung chi tiết"}
+
+6. Thêm mục tiêu tập luyện chung:
+   {"type": "add_goal", "text": "Nội dung mục tiêu"}
+
+**Ví dụ phân tích:**
+- "học viên Nguyễn Khánh Huy, nay học phông cầu, đã nộp 1 triệu, nghỉ không phép" -> Trả về hành động cập nhật học viên:
+  {"type": "update_student", "name": "Nguyễn Khánh Huy", "paid_add": 1000000, "absences_add": 1, "weaknesses": "nay học phông cầu (cần cải thiện)"}
+- "Tạo giáo án 1 tháng cho Hoàng Kỳ Anh, tập trung thể lực" -> Trả về hành động:
+  {"type": "generate_lesson", "name": "Hoàng Kỳ Anh", "aiType": "1month", "customRequest": "Tập trung thể lực"}
+- "Thêm ghi chú: Nhắc đóng học phí cho Đức Anh" -> Trả về hành động:
+  {"type": "add_quick_note", "title": "Nhắc đóng học phí", "content": "Nhắc đóng học phí cho học viên Đức Anh"}
+
+Hãy xử lý tin nhắn của huấn luyện viên sau đây:
+"${query}"
+`;
+
+      const result = await window.api.callAI({
+        provider: state.settings.apiProvider,
+        apiKey: state.settings.apiKey,
+        model: state.settings.aiModel,
+        prompt: systemPrompt
+      });
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      let data;
+      let cleanText = result.text.trim();
+      if (cleanText.startsWith('```')) {
+        cleanText = cleanText.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+      }
+      data = JSON.parse(cleanText);
+
+      return await executeChatActions(data.actions, data.reply);
+    } catch (err) {
+      console.warn("Gemini API failed, using local fallback parser:", err);
+      geminiFailed = true;
+      geminiErrorMsg = err.message || "Lỗi dịch vụ";
+    }
+  }
+
+  if (geminiFailed) {
+    const fallback = tryLocalFallback(query);
+    if (fallback) {
+      return await executeChatActions(fallback.actions, fallback.reply);
+    } else {
+      return {
+        reply: `Trợ lý AI tạm thời gián đoạn do quá tải hoặc chưa cấu hình API Key (Lỗi: ${geminiErrorMsg}). Vui lòng nhập câu lệnh đầy đủ rõ tên học viên và tác vụ để hệ thống nhận diện nội bộ.`,
+        feedback: null
+      };
+    }
+  }
+}
+
+function tryLocalFallback(query) {
+  const queryLower = query.toLowerCase().trim();
+  const actions = [];
+  let reply = "";
+
+  // 1. Tab switching
+  const tabKeywords = {
+    'dashboard': ['dashboard', 'tổng quan', 'trang chủ'],
+    'students': ['học viên', 'học sinh', 'danh sách lớp', 'students'],
+    'schedules': ['lịch rảnh', 'schedules', 'rảnh'],
+    'timetable': ['thời khóa biểu', 'timetable', 'lịch biểu', 'lịch dạy'],
+    'optimizer': ['tối ưu', 'optimizer', 'sắp xếp'],
+    'ai-assistant': ['giáo án', 'trợ lý', 'ai assistant'],
+    'lesson-prep': ['chuẩn bị', 'bài học', 'prep'],
+    'quick-notes': ['ghi chú', 'ghi nhớ', 'sổ tay', 'link'],
+    'settings': ['cấu hình', 'cài đặt', 'settings', 'api']
+  };
+
+  if (queryLower.includes('chuyển') || queryLower.includes('sang tab') || queryLower.includes('mở tab') || queryLower.includes('mở màn hình')) {
+    for (const [tab, keywords] of Object.entries(tabKeywords)) {
+      if (keywords.some(kw => queryLower.includes(kw))) {
+        actions.push({ type: 'switch_tab', tab });
+        reply = `[Ngoại tuyến] Đã chuyển sang tab **${tab.toUpperCase()}**.`;
+        return { reply, actions };
+      }
+    }
+  }
+
+  // 2. Find student
+  let foundStudent = null;
+  const sortedStudents = [...state.students].sort((a, b) => b.name.length - a.name.length);
+  for (const st of sortedStudents) {
+    if (queryLower.includes(st.name.toLowerCase())) {
+      foundStudent = st;
+      break;
+    }
+  }
+
+  // Try sub-part name matching if no full name match
+  if (!foundStudent) {
+    for (const st of sortedStudents) {
+      const parts = st.name.toLowerCase().split(/\s+/).filter(p => p.length > 2);
+      if (parts.length > 0 && parts.every(part => queryLower.includes(part))) {
+        foundStudent = st;
+        break;
+      }
+    }
+  }
+
+  // Try extracting new student if add is requested
+  if (!foundStudent) {
+    const addMatch = query.match(/(?:thêm học viên|thêm học sinh|học viên mới|add)\s+([^,.\n]+)/i);
+    if (addMatch) {
+      const name = addMatch[1].trim();
+      actions.push({
+        type: 'add_student',
+        name: name,
+        gender: queryLower.includes('nữ') ? 'Nữ' : 'Nam'
+      });
+      reply = `[Ngoại tuyến] Đã tự động tạo học viên mới **${name}**.`;
+      return { reply, actions };
+    }
+  }
+
+  if (foundStudent) {
+    const updateAction = { type: 'update_student', name: foundStudent.name };
+    let hasUpdate = false;
+    let updateDesc = [];
+
+    // Tuition payment
+    const payMatch = queryLower.match(/(?:nộp|đóng|nộp thêm|đóng thêm|chuyển|nộp cọc)\s*([\d.,\s]+)\s*(triệu|tr|k|đ|nghìn|ngàn|vnd)?/i);
+    if (payMatch) {
+      let valStr = payMatch[1].replace(/\./g, '').replace(/,/g, '').replace(/\s/g, '');
+      let amount = parseFloat(valStr);
+      if (!isNaN(amount)) {
+        const unit = payMatch[2];
+        if (unit === 'triệu' || unit === 'tr') {
+          amount = amount * 1000000;
+        } else if (unit === 'k' || unit === 'nghìn' || unit === 'ngàn') {
+          amount = amount * 1000;
+        } else if (amount < 5000) {
+          if (amount < 20) amount = amount * 1000000;
+          else amount = amount * 1000;
+        }
+        updateAction.paid_add = amount;
+        hasUpdate = true;
+        updateDesc.push(`Đóng thêm ${amount.toLocaleString('vi-VN')}đ`);
+      }
+    }
+
+    // Sessions set/add
+    const sessionSetMatch = queryLower.match(/(?:học được|học|đã học|tổng)\s*(\d+)\s*buổi/i);
+    if (sessionSetMatch) {
+      updateAction.sessions_set = parseInt(sessionSetMatch[1]);
+      hasUpdate = true;
+      updateDesc.push(`Cập nhật tổng số buổi đã học: ${sessionSetMatch[1]} buổi`);
+    } else {
+      const sessionAddMatch = queryLower.match(/(?:học thêm|thêm)\s*(\d+)\s*buổi/i);
+      if (sessionAddMatch) {
+        updateAction.sessions_add = parseInt(sessionAddMatch[1]);
+        hasUpdate = true;
+        updateDesc.push(`Học thêm ${sessionAddMatch[1]} buổi`);
+      }
+    }
+
+    // Unexcused absences
+    if (queryLower.includes('nghỉ không phép') || queryLower.includes('vắng không phép') || queryLower.includes('nghỉ học') || queryLower.includes('vắng học')) {
+      updateAction.absences_add = 1;
+      hasUpdate = true;
+      updateDesc.push(`Ghi nhận nghỉ không phép (+1)`);
+    }
+
+    // Nghỉ hẳn
+    if (queryLower.includes('nghỉ hẳn') || queryLower.includes('nghỉ luôn') || queryLower.includes('xóa học viên') || queryLower.includes('nghỉ hẳn học')) {
+      actions.push({ type: 'delete_student', name: foundStudent.name });
+      reply = `[Ngoại tuyến] Xử lý học viên **${foundStudent.name}** nghỉ hẳn (Đã xóa hồ sơ khỏi danh sách lớp).`;
+      return { reply, actions };
+    }
+
+    // Weaknesses / Skills practice
+    const skillMatch = queryLower.match(/(?:học|tập|yếu|luyện)\s+([^,.\n]+)/i);
+    if (skillMatch && !skillMatch[0].includes('buổi') && !skillMatch[0].includes('học viên') && !skillMatch[0].includes('học sinh')) {
+      const skillText = skillMatch[1].trim();
+      updateAction.weaknesses = skillText;
+      hasUpdate = true;
+      updateDesc.push(`Ghi nhận bài học hôm nay: "${skillText}"`);
+    }
+
+    // AI Lesson generation
+    if (queryLower.includes('giáo án') || queryLower.includes('bài học') || queryLower.includes('lộ trình')) {
+      let aiType = '90min';
+      if (queryLower.includes('1 tháng') || queryLower.includes('tháng')) aiType = '1month';
+      if (queryLower.includes('team building') || queryLower.includes('teambuilding')) aiType = 'teambuilding';
+      actions.push({
+        type: 'generate_lesson',
+        name: foundStudent.name,
+        aiType,
+        customRequest: query
+      });
+      reply = `[Ngoại tuyến] Đã kích hoạt soạn giáo án cho **${foundStudent.name}** (Loại: ${aiType === '90min' ? '90 phút' : (aiType === '1month' ? '1 tháng' : 'Team building')}).`;
+      return { reply, actions };
+    }
+
+    if (hasUpdate) {
+      actions.push(updateAction);
+      reply = `[Ngoại tuyến] Đã cập nhật hồ sơ học viên **${foundStudent.name}**:\n- ` + updateDesc.join('\n- ');
+      return { reply, actions };
+    }
+  }
+
+  // 3. Add quick note
+  if (queryLower.includes('ghi chú') || queryLower.includes('ghi nhớ') || queryLower.includes('nhắc nhở')) {
+    const titleMatch = query.match(/(?:ghi chú|ghi nhớ|nhắc nhở|sổ tay)\s*(?::|-)?\s*([^,.\n]+)/i);
+    const title = titleMatch ? titleMatch[1].trim() : "Ghi chú nhanh";
+    actions.push({
+      type: 'add_quick_note',
+      title: title,
+      content: query
+    });
+    reply = `[Ngoại tuyến] Đã tạo ghi nhớ mới: **${title}**.`;
+    return { reply, actions };
+  }
+
+  return null;
+}
+
+async function executeChatActions(actions, reply) {
+  let feedbackMsgs = [];
+
+  if (actions && Array.isArray(actions)) {
+    for (const action of actions) {
+      switch (action.type) {
+        case 'switch_tab':
+          const switched = switchTabProgrammatically(action.tab);
+          if (switched) {
+            feedbackMsgs.push(`Đã chuyển sang tab **${action.tab.toUpperCase()}**`);
+          } else {
+            feedbackMsgs.push(`Không thể chuyển sang tab **${action.tab}** (tab không hợp lệ)`);
+          }
+          break;
+
+        case 'add_student':
+          if (!action.name) break;
+          const newStudent = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+            name: action.name,
+            gender: action.gender || 'Nam',
+            phone: action.phone || '',
+            tuition: Number(action.tuition) || 1000000,
+            paid: 0,
+            status: 'Nợ',
+            totalSessions: 12,
+            usedSessions: 0,
+            unexcusedAbsences: 0,
+            strengths: action.strengths || '',
+            weaknesses: action.weaknesses || '',
+            highlights: action.highlights || '',
+            tasks: [...state.settings.defaultTasks.map(t => ({ text: t, completed: false }))],
+            availability: {}
+          };
+          state.students.push(newStudent);
+          await saveData();
+          renderDashboard();
+          renderStudents();
+          feedbackMsgs.push(`Đã thêm học viên mới **${action.name}**`);
+          break;
+
+        case 'update_student':
+          if (!action.name) break;
+          const st = findStudentFuzzy(action.name);
+          if (!st) {
+            feedbackMsgs.push(`Không tìm thấy học viên **${action.name}** trong danh sách để cập nhật`);
+            break;
+          }
+          let updates = [];
+          if (action.paid_add) {
+            st.paid = (st.paid || 0) + Number(action.paid_add);
+            if (st.paid >= (st.tuition || 1000000)) {
+              st.status = 'Đã đóng';
+            } else if (st.paid > 0) {
+              st.status = 'Cọc';
+            } else {
+              st.status = 'Nợ';
+            }
+            updates.push(`đóng thêm ${formatMoney(action.paid_add)} (Tổng đã đóng: ${formatMoney(st.paid)}, trạng thái: ${st.status})`);
+          }
+          if (action.sessions_add) {
+            st.usedSessions = (st.usedSessions || 0) + Number(action.sessions_add);
+            updates.push(`học thêm ${action.sessions_add} buổi (Tổng: ${st.usedSessions}/${st.totalSessions || 12} buổi)`);
+          }
+          if (action.sessions_set !== undefined) {
+            st.usedSessions = Number(action.sessions_set);
+            updates.push(`đặt số buổi đã học thành ${st.usedSessions}/${st.totalSessions || 12}`);
+          }
+          if (action.absences_add) {
+            st.unexcusedAbsences = (st.unexcusedAbsences || 0) + Number(action.absences_add);
+            updates.push(`nghỉ không phép thêm ${action.absences_add} buổi (Tổng vắng: ${st.unexcusedAbsences})`);
+          }
+          if (action.strengths) {
+            st.strengths = st.strengths ? `${st.strengths}, ${action.strengths}` : action.strengths;
+            updates.push(`cập nhật điểm mạnh: "${action.strengths}"`);
+          }
+          if (action.weaknesses) {
+            st.weaknesses = st.weaknesses ? `${st.weaknesses}, ${action.weaknesses}` : action.weaknesses;
+            updates.push(`cập nhật điểm yếu: "${action.weaknesses}"`);
+          }
+          if (action.highlights) {
+            st.highlights = st.highlights ? `${st.highlights}, ${action.highlights}` : action.highlights;
+            updates.push(`cập nhật đặc điểm khác: "${action.highlights}"`);
+          }
+          
+          if (updates.length > 0) {
+            await saveData();
+            renderDashboard();
+            renderStudents();
+            feedbackMsgs.push(`Cập nhật cho **${st.name}**: ${updates.join(', ')}`);
+          } else {
+            feedbackMsgs.push(`Không có thông tin cập nhật hợp lệ cho học viên **${st.name}**`);
+          }
+          break;
+
+        case 'delete_student':
+          if (!action.name) break;
+          const delSt = findStudentFuzzy(action.name);
+          if (delSt) {
+            state.students = state.students.filter(s => s.id !== delSt.id);
+            await saveData();
+            renderDashboard();
+            renderStudents();
+            feedbackMsgs.push(`Đã xóa học viên **${delSt.name}** khỏi hệ thống (nghỉ hẳn)`);
+          }
+          break;
+
+        case 'generate_lesson':
+          if (!action.name) break;
+          const targetSt = findStudentFuzzy(action.name);
+          if (!targetSt) {
+            feedbackMsgs.push(`Không thể tạo giáo án vì không tìm thấy học viên **${action.name}**`);
+            break;
+          }
+          switchTabProgrammatically('ai-assistant');
+          aiStudentSelect.value = targetSt.id;
+          aiStudentSelect.dispatchEvent(new Event('change'));
+          
+          const type = action.aiType || '90min';
+          const radio = document.querySelector(`input[name="ai-type"][value="${type}"]`);
+          if (radio) radio.checked = true;
+          
+          aiCustomPrompt.value = action.customRequest || '';
+          
+          setTimeout(() => {
+            btnGenerateAI.click();
+          }, 200);
+          
+          feedbackMsgs.push(`Đã chuyển sang tab AI và bắt đầu tự động tạo giáo án **${type}** cho **${targetSt.name}**`);
+          break;
+
+        case 'add_quick_note':
+          if (!action.title) break;
+          const newNote = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+            title: action.title,
+            url: '',
+            content: action.content || '',
+            date: new Date().toLocaleString('vi-VN')
+          };
+          state.quickNotes.unshift(newNote);
+          await saveData();
+          renderQuickNotes(notesSearchInput.value);
+          feedbackMsgs.push(`Đã thêm ghi chú mới: "**${action.title}**"`);
+          break;
+
+        case 'add_goal':
+          if (!action.text) break;
+          const newGoal = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+            title: action.text,
+            targetCount: 10,
+            manualProgress: 0
+          };
+          state.timetableGoals.push(newGoal);
+          await saveData();
+          renderTimetableGoals();
+          feedbackMsgs.push(`Đã thêm mục tiêu thời khóa biểu: "**${action.text}**"`);
+          break;
+      }
+    }
+  }
+
+  const feedbackText = feedbackMsgs.length > 0 
+    ? `⚡ **Hệ thống đã thực hiện:**<br>• ${feedbackMsgs.join('<br>• ')}`
+    : null;
+
+  return {
+    reply,
+    feedback: feedbackText
+  };
 }
 
 

@@ -538,6 +538,10 @@
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                   <span>Sao chép</span>
                 </button>
+                <button class="btn btn-secondary btn-sm" id="btn-condense-ai-output" style="display: none;">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/></svg>
+                  <span>Cô đọng</span>
+                </button>
                 <button class="btn btn-primary btn-sm" id="btn-save-ai-output" style="display: none;">
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                   <span>Lưu giáo án</span>
@@ -1295,6 +1299,52 @@ git push -u origin main</code></pre>
 
   <!-- Dynamic Toast Messages -->
   <div id="toast-container" class="toast-container"></div>
+
+  <!-- GLOBAL CHATBOT -->
+  <div class="global-chat-trigger" id="global-chat-trigger" title="Trợ Lý Điều Khiển AI">
+    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2.5" fill="none">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    </svg>
+    <span class="chat-badge-pulse"></span>
+  </div>
+
+  <div class="global-chat-window" id="global-chat-window" style="display: none;">
+    <div class="chat-header">
+      <div class="chat-header-info">
+        <svg viewBox="0 0 24 24" width="20" height="20" stroke="var(--accent-secondary)" stroke-width="2" fill="none">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+          <line x1="9" y1="9" x2="9.01" y2="9"></line>
+          <line x1="15" y1="9" x2="15.01" y2="9"></line>
+        </svg>
+        <strong>Trợ Lý Điều Khiển AI</strong>
+      </div>
+      <button class="chat-close-btn" id="btn-close-global-chat">&times;</button>
+    </div>
+    
+    <div class="chat-body" id="global-chat-body">
+      <div class="chat-msg ai">
+        Chào Coach! Tôi là <strong>Trợ lý Điều khiển AI</strong>. Tôi có thể giúp bạn cập nhật học phí, buổi học, chuyên cần hoặc tạo giáo án cho bất kỳ học viên nào thông qua giọng điệu chat tự nhiên.
+        <br><br>
+        <strong>Bạn có thể thử nhập:</strong>
+        <div class="chat-examples">
+          <div class="chat-example-item" data-text="Học viên Nguyễn Khánh Huy, nay học phông cầu, đã nộp 1 triệu, nghỉ không phép.">✍️ <em>"Học viên Nguyễn Khánh Huy, nay học phông cầu, đã nộp 1 triệu, nghỉ không phép"</em></div>
+          <div class="chat-example-item" data-text="Học viên Hoàng Kỳ Anh đã học thêm 1 buổi và nộp 500k">✍️ <em>"Học viên Hoàng Kỳ Anh đã học thêm 1 buổi và nộp 500k"</em></div>
+          <div class="chat-example-item" data-text="Tạo giáo án 90 phút cho học viên Lê Hoàng Long">✍️ <em>"Tạo giáo án 90 phút cho học viên Lê Hoàng Long"</em></div>
+          <div class="chat-example-item" data-text="Chuyển sang tab Lịch Rảnh">✍️ <em>"Chuyển sang tab Lịch Rảnh"</em></div>
+          <div class="chat-example-item" data-text="Thêm ghi chú: Chuẩn bị bóng thi đấu cho tuần sau">✍️ <em>"Thêm ghi chú: Chuẩn bị bóng thi đấu..."</em></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="chat-footer">
+      <input type="text" id="global-chat-input" placeholder="Nhập tin nhắn hoặc câu lệnh..." autocomplete="off">
+      <button id="btn-send-global-chat" class="btn-send-chat">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+
   <script src="renderer.js"></script>
 </body>
 </html>
